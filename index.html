@@ -902,7 +902,7 @@ async function loadFreeModels() {
   } catch { /* keep fallback */ }
 
   // Drop a saved model that is no longer free or listed
-  if (prefs.model && !MODELS.some(m => m.id === prefs.model) && prefs.model !== prefs.customId) {
+  if (prefs.model && !MODELS.some(m => m.id === prefs.model)) {
     prefs.model = AUTO_MODEL.id;
     persist();
   }
@@ -944,9 +944,6 @@ const els = {
 };
 
 let prefs = JSON.parse(localStorage.getItem('volt_prefs') || '{}');
-// Web search is billed by OpenRouter per search, so keep it OFF by default.
-// The version flag resets it once for users who had it on from an earlier build.
-if (prefs.webVersion !== 2) { prefs.web = false; prefs.webVersion = 2; }
 let convos = JSON.parse(localStorage.getItem('volt_convos') || '[]');
 let currentId = convos[0]?.id || null;
 let busy = false, abortCtrl = null;
@@ -993,22 +990,14 @@ function buildModelSelect() {
   MODELS.forEach(m => { (groups[m.group] ||= []).push(m); });
   let html = '';
   for (const g in groups) {
-    html += `<optgroup label="${g}">` + groups[g].map(m => `<option value="${m.id}">${esc(m.name)} (free)</option>`).join('') + '</optgroup>';
+    html += `<optgroup label="${g}">` + groups[g].map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('') + '</optgroup>';
   }
-  if (prefs.customId) html += `<optgroup label="Custom"><option value="${prefs.customId}">${prefs.customId}</option></optgroup>`;
-  html += '<option value="__custom__">Custom model ID…</option>';
   els.model.innerHTML = html;
   els.model.value = selectedModel();
   if (els.model.value !== selectedModel()) els.model.value = MODELS[0].id;
 }
 els.model.addEventListener('change', () => {
-  if (els.model.value === '__custom__') {
-    const id = prompt('Paste an OpenRouter model ID (e.g. vendor/model:free):', prefs.customId || '');
-    if (id && id.trim()) { prefs.customId = id.trim(); prefs.model = prefs.customId; }
-    buildModelSelect();
-  } else {
-    prefs.model = els.model.value;
-  }
+  prefs.model = els.model.value;
   persist();
 });
 
@@ -1306,7 +1295,6 @@ async function streamInto(assistantMsg, bodyEl) {
       model: useModel,
       stream: true,
       reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
-      ...(prefs.web ? { plugins: [{ id: 'web' }] } : {}),
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...payloadMessages]
     }),
     signal: abortCtrl.signal
@@ -1475,24 +1463,16 @@ function renderStatePills() {
   if (skill && skill.id !== 'none') {
     pills.push(`<span class="pill">${esc(skill.name)}<button data-clear-skill title="Remove skill" aria-label="Remove skill">${XICON}</button></span>`);
   }
-  if (prefs.web) {
-    pills.push(`<span class="pill">Web search<button data-clear-web title="Turn off web search" aria-label="Turn off web search">${XICON}</button></span>`);
-  }
   $('statePills').innerHTML = pills.join('');
 }
 $('statePills').addEventListener('click', e => {
   if (e.target.closest('[data-clear-skill]')) { prefs.skill = 'none'; }
-  if (e.target.closest('[data-clear-web]')) { prefs.web = false; }
-  if (e.target.closest('[data-clear-skill],[data-clear-web]')) { persist(); renderStatePills(); renderPopover(); }
+  if (e.target.closest('[data-clear-skill]')) { persist(); renderStatePills(); renderPopover(); }
 });
 
 function renderPopover() {
   $('popover').innerHTML = `
     <div class="pop-label">Connectors</div>
-    <button class="pop-item" data-act="web">
-      <span>Web search<span class="sub">Let Volt look things up online</span></span>
-      <span class="switch"><input type="checkbox" tabindex="-1" ${prefs.web ? 'checked' : ''}/><span class="slider"></span></span>
-    </button>
     <button class="pop-item" data-act="attach">
       <span>Attach a file<span class="sub">Text, code, CSV, Markdown, images</span></span>
     </button>
@@ -1522,7 +1502,6 @@ $('popover').addEventListener('click', e => {
   const sk = e.target.closest('[data-skill]');
   if (sk) { prefs.skill = sk.dataset.skill; persist(); renderPopover(); renderStatePills(); return; }
   const act = e.target.closest('[data-act]')?.dataset.act;
-  if (act === 'web') { prefs.web = !prefs.web; persist(); renderPopover(); renderStatePills(); }
   if (act === 'attach') { togglePopover(false); $('fileInput').click(); }
   if (act === 'newskill') { togglePopover(false); openSkillDialog(); }
   if (act === 'editskill') { togglePopover(false); openSkillDialog(allSkills().find(s => s.id === prefs.skill)); }
