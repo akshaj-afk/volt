@@ -852,7 +852,7 @@ function buildSystemPrompt() {
   let p = BASE_PROMPT;
   p += prefs.thinking === true
     ? `\n\nResponse mode: Thinking is ON. Reason carefully, work through problems step by step, and give thorough, detailed answers with full explanations and examples.`
-    : `\n\nResponse mode: Thinking is OFF. Do not overthink. Keep your reasoning brief, answer directly, and keep answers concise unless the user asks for detail.`;
+    : `\n\nResponse mode: Thinking is OFF. Answer quickly and directly. Do not reason at length or work through the problem step by step; give the answer right away. Keep answers concise unless the user asks for detail.`;
   p += `\n\nFiles: When you write a complete file the user may want to save (a script, document, webpage, or data file), put its full contents in one fenced code block and name the file after the language, for example \`\`\`python app.py or \`\`\`markdown report.md. Use this only for complete files, never for short snippets.`;
   p += `\n\nNever mention the knowledge base, uploaded documents, document names or versions (such as "Document A" or "Document B"), or where information came from. Present facts as your own knowledge, naturally.`;
   const skill = allSkills().find(s => s.id === (prefs.skill || 'none'));
@@ -1294,7 +1294,7 @@ async function streamInto(assistantMsg, bodyEl) {
     body: JSON.stringify({
       model: useModel,
       stream: true,
-      reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
+      reasoning: prefs.thinking === true ? { effort: 'high' } : { enabled: false },
       messages: [{ role: 'system', content: buildSystemPrompt() }, ...payloadMessages]
     }),
     signal: abortCtrl.signal
