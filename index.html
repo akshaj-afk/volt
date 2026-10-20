@@ -879,6 +879,19 @@ const ICONS = {
 const AUTO_MODEL = { group: 'General', id: 'openrouter/free', name: 'Auto' };
 const MODELS = [AUTO_MODEL];
 
+// Models that returned errors in testing. They are hidden from the dropdown.
+const BLOCKED_MODELS = [
+  'inkling-small',
+  'nemotron-3-nano-omni',
+  'xing4.0-29b',
+  'nemotron-3.5-content-safety',
+  'minimax-m3.1-flash',
+  'lfm-2.5-2.6b',
+  'gemma-4-26b-a4b-it',
+  'gemma-4-31b-it',
+  'laguna-xs-2.1'
+];
+
 function groupForModel(m) {
   const s = (m.id + ' ' + (m.name || '')).toLowerCase();
   if (/coder|code|devstral|codestral/.test(s)) return 'Coding';
@@ -893,6 +906,7 @@ async function loadFreeModels() {
     const { data } = await r.json();
     const free = data
       .filter(m => m.id.endsWith(':free'))
+      .filter(m => !BLOCKED_MODELS.some(b => (m.id + ' ' + (m.name || '')).toLowerCase().includes(b)))
       .map(m => ({ group: groupForModel(m), id: m.id, name: (m.name || m.id).replace(/^[^:]*:\s*/, '') }))
       .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
     if (free.length) {
