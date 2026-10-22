@@ -1548,6 +1548,36 @@
   }
   [data-mode="cli"] .gui-exit:hover { color: var(--accent); border-color: var(--accent); }
   [data-mode="cli"] .chat { padding-top: 34px; }
+
+  /* =====================================================================
+     THINKING ANIMATION v2: a pulsing ring around a core dot, a wave
+     through the word "Thinking", and three bouncing dots.
+     ===================================================================== */
+  .typing { gap: 9px; }
+  .torb { position: relative; width: 14px; height: 14px; flex-shrink: 0; display: inline-block; }
+  .torb i {
+    position: absolute; inset: 4px; border-radius: 50%; background: var(--accent);
+    animation: tcore 1.6s ease-in-out infinite;
+  }
+  .torb b {
+    position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--accent);
+    animation: tring 1.6s ease-out infinite;
+  }
+  @keyframes tcore { 0%, 100% { transform: scale(.8); opacity: .75; } 50% { transform: scale(1.05); opacity: 1; } }
+  @keyframes tring { 0% { transform: scale(.55); opacity: .9; } 100% { transform: scale(1.9); opacity: 0; } }
+
+  .typing .tlabel { animation: none; font-weight: 500; letter-spacing: .01em; }
+  .tl { display: inline-block; white-space: pre; animation: tletter 1.4s ease-in-out infinite; }
+  @keyframes tletter {
+    0%, 60%, 100% { transform: translateY(0); opacity: .45; }
+    30% { transform: translateY(-3px); opacity: 1; }
+  }
+
+  [data-mode="cli"] .torb { display: none; }
+  [data-mode="cli"] .tl { animation: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .torb i, .torb b, .tl { animation: none; }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -1855,9 +1885,13 @@
 /* The OpenRouter key is NOT in this file. It lives in Vercel as
    OPENROUTER_API_KEY and is used only by api/chat.js on the server. */
 
-const BASE_PROMPT = `You are Volt, a smart, friendly and capable AI assistant.
-Think carefully before answering hard questions and explain your reasoning when it helps.
-Write clean, correct, well-commented code when asked. Keep answers concise unless the user wants detail.
+const BASE_PROMPT = `You are Volt. Talk the way a sharp, friendly person would in a chat: natural, relaxed and warm, never stiff or robotic.
+Sound like a real person. Use plain, everyday language and contractions. Vary your sentence length. Match the user's tone and energy: casual when they're casual, careful when they're stressed, precise when they're technical.
+Don't open with filler like "Great question!", "Certainly!" or "As an AI". Don't announce what you're about to do, and don't pile on bullet points or headers unless they really help. Just answer.
+Say "I'm not sure" or "I don't know" when that's true, and don't make things up. If you made a mistake, own it briefly and fix it.
+Don't end every reply with an offer like "How can I help?" or "Let me know if you need anything." Most replies should just stop when the answer is done. When someone is chatting, talk back: share a view, react to what they said, tell a relevant thought, or ask a follow-up because you're curious, not because it's your job. Ask at most one question, and only when it really helps.
+Think carefully before answering hard questions, and explain your reasoning when it helps. Write clean, correct, well-commented code when asked. Keep answers concise unless the user wants detail.
+If someone sincerely asks whether you're a human or an AI, be honest that you're an AI assistant named Volt.
 The knowledge base below is background reference only. Do not bring it up on your own. Never mention MANEX, Volt's creators, partners, workstations, apps, generations, anniversaries, websites, or history unless the user asks about them directly by name or asks who made you. The one exception is the MANEX Teams community: mention it when the user asks about a community, support, help, or where to talk to other people about Volt or MANEX, and otherwise leave it out. When the user does ask about MANEX or its details, answer only from the knowledge base. If the knowledge base does not contain the answer, say that you don't have that information. Do not guess, do not use outside knowledge, and do not invent details. Do not mention the knowledge base itself. Every other question is answered from general knowledge as usual, without any MANEX references.`;
 
 // Paste your knowledge base between the backticks when you have it.
@@ -1866,7 +1900,7 @@ MAIN KNOWLEDGE BASE
 ======================================================================
 Overview of MANEX Inc.
 
-MANEX Inc. is a software development organization founded by Adithya Shastry and Akshaj Kulkarni (concept in 2019, officially founded November 20, 2020). It builds practical desktop tools, lightweight coding workstations, and developer apps. Its code is published on the MANEX-Inc GitHub, its official website is hosted on GitHub at manex.s.gy/genai.
+MANEX Inc. is a software development organization founded by Adithya Shastry and Akshaj Kulkarni (concept in 2019, officially founded November 20, 2020). It builds practical desktop tools, lightweight coding workstations, and developer apps. Its code is published on the MANEX-Inc GitHub.
 
 Leadership:
 - Akshaj Kulkarni: President and developer of all MANEX apps (co-founder).
@@ -1917,7 +1951,6 @@ Recent notes (2026, most recent source):
 - Anniversary: celebrated every year on November 20. The 5th was completed; the 6th is on 20/11/2026.
 - Current development: mainly Python, compiled to .exe and posted on GitHub (MANEX-Inc). The older MANEX - PY and MANEX - HTML groups are discontinued. Android app development has stopped.
 - MANEX is in Gen Advance and created a plane named Sky Voyager, accessible in the community.
-- Website: manex.s.gy/genai.
 - The 2026 internal document is confidential. Share only what is needed to answer a question.`;
 
 function buildSystemPrompt() {
@@ -2901,7 +2934,10 @@ function bodyHTML(m) {
     /* Negative delays tie each dot to the wall clock, so re-rendering the body does not restart the bounce. */
     const t = Date.now();
     const dots = [0, 1, 2].map(k => `<i style="animation-delay:-${(t + k * 160) % 1200}ms"></i>`).join('');
-    h += `<span class="typing" role="status" aria-label="Volt is thinking"><span class="tlabel" style="animation-delay:-${t % 1800}ms">Thinking</span><span class="tdots">${dots}</span></span>`;
+    /* Each letter and the pulse ring get a clock-based delay, so re-rendering keeps the motion smooth. */
+    const word = [...'Thinking'].map((ch, k) => `<span class="tl" style="animation-delay:-${(t + k * 90) % 1400}ms">${ch}</span>`).join('');
+    const orb = `<span class="torb" aria-hidden="true"><b style="animation-delay:-${t % 1600}ms"></b><i style="animation-delay:-${t % 1600}ms"></i></span>`;
+    h += `<span class="typing" role="status" aria-label="Volt is thinking">${orb}<span class="tlabel">${word}</span><span class="tdots">${dots}</span></span>`;
   }
   return h;
 }
