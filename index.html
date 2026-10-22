@@ -1578,6 +1578,14 @@
   @media (prefers-reduced-motion: reduce) {
     .torb i, .torb b, .tl { animation: none; }
   }
+
+  /* Bouncing dots: keyframes are global and the dots carry their own inline styles, so nothing overrides them */
+  @keyframes voltdot {
+    0%, 60%, 100% { transform: translateY(0); opacity: .3; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+  .tdots { display: inline-flex; align-items: center; gap: 4px; }
+  [data-mode="cli"] .tdots { display: none; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -2933,7 +2941,8 @@ function bodyHTML(m) {
   else if (!src.error) {
     /* Negative delays tie each dot to the wall clock, so re-rendering the body does not restart the bounce. */
     const t = Date.now();
-    const dots = [0, 1, 2].map(k => `<i style="animation-delay:-${(t + k * 160) % 1200}ms"></i>`).join('');
+    const dotStyle = k => `display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.3;animation:voltdot 1.2s ease-in-out infinite;animation-delay:-${(t + k * 160) % 1200}ms`;
+    const dots = [0, 1, 2].map(k => `<i style="${dotStyle(k)}"></i>`).join('');
     /* Each letter and the pulse ring get a clock-based delay, so re-rendering keeps the motion smooth. */
     const word = [...'Thinking'].map((ch, k) => `<span class="tl" style="animation-delay:-${(t + k * 90) % 1400}ms">${ch}</span>`).join('');
     const orb = `<span class="torb" aria-hidden="true"><b style="animation-delay:-${t % 1600}ms"></b><i style="animation-delay:-${t % 1600}ms"></i></span>`;
