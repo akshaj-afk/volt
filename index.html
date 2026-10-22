@@ -1844,6 +1844,7 @@
 <div class="menu-pop" id="menuPop" hidden></div>
 </div>
 
+<button type="button" class="gui-exit" id="guiExit" title="Switch back to the chat interface">GUI</button>
 <script>
 /* The OpenRouter key is NOT in this file. It lives in Vercel as
    OPENROUTER_API_KEY and is used only by api/chat.js on the server. */
@@ -2312,7 +2313,7 @@ function runCliCommand(raw) {
 
 function toggleCli() { prefs.cli = !prefs.cli; applyMode(); persist(); }
 $('cliBtn').addEventListener('click', toggleCli);
-$('guiExit').addEventListener('click', toggleCli);
+$('guiExit')?.addEventListener('click', toggleCli);
 
 
 els.speakToggle.checked = !!prefs.speak;
@@ -4346,6 +4347,5 @@ autosize();
 updateJump();
 persist();
 </script>
-<button type="button" class="gui-exit" id="guiExit" title="Switch back to the chat interface">GUI</button>
 </body>
 </html>
