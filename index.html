@@ -184,8 +184,10 @@
     box-shadow: inset 2px 0 0 var(--accent);
   }
   .item span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .item-tools { display: flex; gap: 2px; opacity: 0; transition: opacity .18s; }
+  .item-tools { display: flex; gap: 2px; opacity: .5; transition: opacity .18s; }
   .item:hover .item-tools, .item:focus-within .item-tools { opacity: 1; }
+  .item-tools .ico[data-del] { color: var(--muted); }
+  .item-tools .ico[data-del]:hover { color: #d14343; }
   .item .ico { background: none; border: 0; color: var(--muted); padding: 5px; border-radius: var(--pill); line-height: 0; }
   .item .ico:hover { color: var(--accent); background: var(--surface-2); }
   .item .ico svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -1586,6 +1588,11 @@
   }
   .tdots { display: inline-flex; align-items: center; gap: 4px; }
   [data-mode="cli"] .tdots { display: none; }
+
+  /* Inline HTML blocks (quizzes, small widgets) inside the chat */
+  .inline-ui { margin: 10px 0 6px; border: var(--rule); border-radius: var(--radius-lg); overflow: hidden; background: #fff; }
+  .inline-frame { display: block; width: 100%; border: 0; background: #fff; }
+  [data-mode="cli"] .inline-ui { display: none; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -1967,7 +1974,7 @@ function buildSystemPrompt() {
     ? `\n\nResponse mode: Thinking is ON. Reason carefully, work through problems step by step, and give thorough, detailed answers with full explanations and examples.`
     : `\n\nResponse mode: Thinking is OFF. Do not overthink. Keep your reasoning brief, answer directly, and keep answers concise unless the user asks for detail.`;
   p += `\n\nFiles: Whenever you write code, a script, markup, a config, or any data file, put its full contents in a fenced code block that names the file, for example \`\`\`python app.py, \`\`\`javascript utils.js, or \`\`\`markdown report.md. Every code block is saved as a file the user can download, so always give a real filename and always give complete, runnable contents.`;
-  p += `\n\nInterfaces: Whenever the user asks for an app, interface, UI, mock-up, form, dashboard, page, animation, calculator, tool or game, build it as one complete self-contained HTML file (inline CSS and JS, no external assets unless the user asks) in a fenced \`\`\`html page-name.html block. The app previews it live inside the chat window and lets the user download it, so the interface must work immediately. Keep it working on the first try: no placeholders, no TODOs.`;
+  p += `\n\nInterfaces: Whenever the user asks for an app, interface, UI, mock-up, form, dashboard, page, animation, calculator, tool or game, build it as one complete self-contained HTML file (inline CSS and JS, no external assets unless the user asks) in a fenced \`\`\`html page-name.html block. The app previews it live inside the chat window and lets the user download it, so the interface must work immediately. Keep it working on the first try: no placeholders, no TODOs. Quizzes, polls, games, calculators and other small interactive pieces belong right in the chat, so make them an html block; they appear inline in the conversation. Never tell the user to open a file to use them.`;
   p += `\n\nMemory: You also have a short list of remembered facts below. When the user explicitly asks you to remember something new, add one final line of your reply that says exactly [volt-remember: <one short fact>] and put nothing after it. Never write that marker for anything else, and never show it to the user in normal conversation.`;
   p += `\n\nNever mention the knowledge base, uploaded documents, document names or versions (such as "Document A" or "Document B"), or where information came from. Present facts as your own knowledge, naturally.`;
   const now = new Date();
@@ -2118,17 +2125,53 @@ let busy = false, abortCtrl = null, storageBytes = 0;
 let compareCtrls = [];
 
 /* ============================ STORAGE ============================ */
+/* Chats live in IndexedDB, which holds far more than localStorage's ~5 MB limit.
+   Preferences stay in localStorage because they are small. */
+function openVoltDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('volt', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function dbPut(key, value) {
+  const db = await openVoltDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('kv', 'readwrite');
+    tx.objectStore('kv').put(value, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+async function dbGet(key) {
+  const db = await openVoltDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('kv').objectStore('kv').get(key);
+    req.onsuccess = () => { db.close(); resolve(req.result); };
+    req.onerror = () => { db.close(); reject(req.error); };
+  });
+}
+let saveFailed = false;
 function persist() {
   try {
-    const c = JSON.stringify(convos), p = JSON.stringify(prefs);
-    localStorage.setItem('volt_convos', c);
+    const p = JSON.stringify(prefs);
     localStorage.setItem('volt_prefs', p);
-    storageBytes = new Blob([c, p]).size;
-  } catch {
-    toast('Browser storage is full. Delete some chats to keep saving.');
-  }
+    storageBytes = new Blob([JSON.stringify(convos), p]).size;
+  } catch { /* prefs are small; ignore */ }
+  dbPut('convos', convos)
+    .then(() => { saveFailed = false; })
+    .catch(() => { if (!saveFailed) toast('Could not save chats in this browser. Free up some space and try again.'); saveFailed = true; });
   updateStorageInfo();
 }
+/* Load chats from IndexedDB after startup. Chats saved in localStorage by older builds are moved over once. */
+dbGet('convos').then(saved => {
+  if (Array.isArray(saved)) { convos = saved; }
+  else if (convos.length) { dbPut('convos', convos).catch(() => {}); }
+  try { localStorage.removeItem('volt_convos'); } catch {}
+  if (!currentId || !convos.some(c => c.id === currentId)) currentId = convos[0]?.id || null;
+  renderAll(false);
+}).catch(() => {});
 function current() { return convos.find(c => c.id === currentId); }
 function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
@@ -2257,6 +2300,19 @@ function cliOut(title, text) {
   cliEchoes.push(`<pre class="cli-echo"><span class="cli-echo-title">${esc(title)}</span>\n${esc(text)}</pre>`);
   renderAll();
 }
+/* A live HTML block rendered inside the chat, sized to its content */
+function inlineUIHTML(raw) {
+  const beat = '<scr' + 'ipt>(function(){function p(){parent.postMessage({voltH:document.documentElement.scrollHeight},"*")}' +
+    'if(window.ResizeObserver){new ResizeObserver(p).observe(document.documentElement)}window.addEventListener("load",p);p()})();</scr' + 'ipt>';
+  const doc = /<\/body>/i.test(raw) ? raw.replace(/<\/body>/i, beat + '</body>') : raw + beat;
+  return `<div class="inline-ui"><iframe class="inline-frame" sandbox="allow-scripts allow-forms" title="Interactive preview" style="height:260px" srcdoc="${esc(doc)}"></iframe></div>`;
+}
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d || typeof d.voltH !== 'number') return;
+  const f = [...document.querySelectorAll('.inline-frame')].find(x => x.contentWindow === e.source);
+  if (f) f.style.height = Math.min(Math.max(d.voltH + 4, 120), 900) + 'px';
+});
 function cliFileHTML(name, text, lang, highlighted) {
   let i = cliFiles.findIndex(f => f.name === name);
   if (i < 0) { cliFiles.push({ name, text }); i = cliFiles.length - 1; } else cliFiles[i].text = text;
@@ -2559,6 +2615,7 @@ function openArtifact(name, text, lang, allowCode) {
 }
 function showArtifact(it) {
   if (!it) return;
+  if (it.kind !== 'js' && panel.view === 'console') panel.view = 'preview';
   panel.activeId = it.id;
   panelEl.root.hidden = false;
   renderPanel();
@@ -2600,9 +2657,17 @@ function setPanelView(v) {
   persist();
   renderPanel();
 }
+/* Replace the iframe each time so the preview always starts from a clean document. */
+function freshFrame() {
+  const old = panelEl.frame;
+  const f = old.cloneNode(false);
+  old.replaceWith(f);
+  panelEl.frame = f;
+  return f;
+}
 function loadFrame(it) {
   clearConsole();
-  panelEl.frame.srcdoc = docFor(it);
+  freshFrame().srcdoc = docFor(it);
   it.loadedText = it.text;
 }
 function reloadFrame() {
@@ -2611,7 +2676,7 @@ function reloadFrame() {
   clearConsole();
   panelEl.frame.srcdoc = '';
   requestAnimationFrame(() => {
-    panelEl.frame.srcdoc = docFor(it);
+    freshFrame().srcdoc = docFor(it);
     it.loadedText = it.text;
   });
 }
@@ -2784,6 +2849,7 @@ if (window.marked) {
     if (lang === 'mermaid') return prefs.cli ? `<pre class="cli-code">${esc(raw)}</pre>` : `<div class="mermaid-box" data-mmd="${enc(raw)}"></div>`;
     const highlighted = highlightCode(raw, lang);
     if (!fileName && lang !== 'mermaid') fileName = defaultFileName(lang);
+    if (fileName && !prefs.cli && lang === 'html') return inlineUIHTML(raw) + fileCardHTML(fileName, raw, lang, highlighted);
     if (fileName) return prefs.cli ? cliFileHTML(fileName, raw, lang, highlighted) : fileCardHTML(fileName, raw, lang, highlighted);
     return `<div class="code"><div class="code-head"><span>${esc(lang || 'text')}</span>` +
       `<span class="code-btns">${snippetBtn(lang)}<button data-act="copycode">Copy</button></span></div><pre><code class="hljs">${highlighted}</code></pre></div>`;
