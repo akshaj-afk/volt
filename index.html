@@ -1226,6 +1226,328 @@
   /* Composer send and mic: square-ish, ink */
   .circle { border-radius: 10px; }
   .circle.mic.on { background: var(--danger); }
+
+
+  /* =====================================================================
+     POLISH PASS 3: thinking animation, spacing, and overlap fixes
+     ===================================================================== */
+
+  /* Thinking indicator: a soft label with three bouncing dots */
+  .typing {
+    display: inline-flex; align-items: center; gap: 10px; padding: 6px 2px;
+    color: var(--muted); font-size: 13.5px; font-family: var(--font-ui);
+  }
+  .tlabel { animation: tpulse 1.8s ease-in-out infinite; }
+  .tdots { display: inline-flex; align-items: center; gap: 4px; }
+  .typing .tdots i {
+    width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .3;
+    animation: tbounce 1.2s ease-in-out infinite; transform: none;
+  }
+  .typing .tdots i:nth-child(2) { animation-delay: .16s; }
+  .typing .tdots i:nth-child(3) { animation-delay: .32s; }
+  @keyframes tbounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .3; }
+    30% { transform: translateY(-4px); opacity: .9; }
+  }
+  @keyframes tpulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .tlabel, .typing .tdots i { animation: none; }
+  }
+
+  /* Reasoning block: quieter and aligned with the text column */
+  details.think { margin-bottom: 10px; }
+  details.think > div { font-size: 12.5px; }
+
+  /* Reply text: Claude-like reading size and rhythm */
+  .msg.assistant .text, .msg.assistant .md { font-size: calc(var(--fs) + 1px); line-height: 1.7; color: var(--text); }
+  .msg.assistant { margin-bottom: 26px; }
+  .msg.user { margin-bottom: 22px; }
+  .msg.user .bubble { max-width: 100%; padding: 10px 16px; line-height: 1.6; overflow-wrap: anywhere; }
+
+  /* Overlap fixes: let rows wrap and truncate instead of colliding */
+  .topbar { height: auto; min-height: 52px; padding: 8px 16px; flex-wrap: nowrap; }
+  .topbar > * { min-width: 0; }
+  .convo-title { flex: 1 1 auto; }
+  .toolbar { flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+  .left-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; flex: 1 1 auto; }
+  .tools { flex-shrink: 0; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .think-toggle { white-space: nowrap; flex-shrink: 0; }
+  .model-wrap { min-width: 0; max-width: 100%; }
+  .model-select { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+  .state-pills { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+  .actions { flex-wrap: wrap; }
+  .actions button { flex-shrink: 0; }
+  .file-card { min-width: 0; }
+  .file-meta { min-width: 0; flex: 1 1 auto; }
+  .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-actions { flex-shrink: 0; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .item { min-width: 0; }
+  .item > * { min-width: 0; }
+  .msg.assistant .text, .md { overflow-wrap: anywhere; }
+  .md table { display: block; max-width: 100%; overflow-x: auto; }
+  .md img, .md iframe { max-width: 100%; }
+  @media (max-width: 640px) {
+    .state-pills { display: none; }
+    .composer-wrap { padding: 0 10px 10px; }
+    .col { padding: 18px 14px 14px; }
+    .think-toggle span:first-child { display: none; }
+  }
+
+  /* Claude-like softness */
+  .composer { border-color: var(--border); box-shadow: 0 1px 2px rgba(40,36,24,.05), 0 8px 24px -16px rgba(40,36,24,.18); }
+  .composer:focus-within { border-color: var(--border-strong); box-shadow: 0 1px 2px rgba(40,36,24,.05), 0 8px 24px -16px rgba(40,36,24,.22); }
+  .empty h1 { font-size: 38px; line-height: 1.15; }
+  .empty p { font-size: 15px; color: var(--muted); }
+  .item { padding: 8px 10px; }
+  .code { box-shadow: none; }
+  .code-head { background: var(--surface-2); }
+
+  /* Overlap fix: text buttons inherited line-height:0 from the icon buttons, so their labels stacked on top of each other */
+  .actions .textbtn { line-height: 1.25; white-space: nowrap; padding: 5px 11px; font-size: 12px; }
+  .actions .model-tag { line-height: 1.4; white-space: nowrap; }
+  .actions { align-items: center; gap: 4px; }
+
+  /* =====================================================================
+     USER MESSAGE FIX: the bubble text was white on a light bubble
+     ===================================================================== */
+  .msg.user .bubble { color: var(--text); }
+  [data-theme="dark"] .msg.user .bubble { color: var(--text); background: var(--surface-2); }
+
+  /* =====================================================================
+     CLI OVERHAUL: a real terminal look (mono type, prompts, box-drawn
+     blocks, blinking cursor). Scoped to the CLI toggle only.
+     ===================================================================== */
+  [data-mode="cli"] {
+    --radius: 3px; --radius-lg: 4px; --radius-xl: 4px; --pill: 3px;
+    --bg: #0a0c0b; --sidebar: #070908; --surface: #0e1210; --surface-2: #121815;
+    --hover: #15201b; --border: #1d2a24; --border-strong: #2c4038;
+    --text: #cdeee0; --text-2: #9cc7b3; --muted: #5f8576;
+    --accent: #4ef0b8; --accent-hover: #86ffd4; --accent-soft: #10251d;
+    --code-bg: #060807; --grad: #1b7a5c; --grad-hover: #22977a; --grad-soft: #0f1f19;
+    --syn-kw: #7fd6ff; --syn-str: #b5f29a; --syn-num: #ffd27a; --syn-title: #ff9ecb;
+    --syn-type: #7fe3f5; --syn-attr: #ffe08a;
+    --shadow-sm: none; --shadow-md: none; --shadow-lg: 0 0 0 1px var(--border-strong);
+    --glow: 0 0 0 1px var(--accent);
+    --font-ui: "JetBrains Mono", "SF Mono", Menlo, Consolas, ui-monospace, monospace;
+    --font-serif: var(--font-ui);
+    --fs: 13.5px;
+    background: var(--bg);
+  }
+  [data-mode="cli"] body { letter-spacing: 0; line-height: 1.55; }
+  [data-mode="cli"] .topbar { background: var(--sidebar); border-bottom: 1px dashed var(--border-strong); min-height: 40px; height: auto; padding: 6px 14px; }
+  [data-mode="cli"] .convo-title { font-size: 12.5px; font-weight: 500; color: var(--text-2); }
+  [data-mode="cli"] .convo-title::before { content: "volt@cli:~ "; color: var(--accent); }
+  [data-mode="cli"] .wordmark { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: 0; }
+  [data-mode="cli"] .wordmark::before { content: "> "; color: var(--muted); }
+  [data-mode="cli"] .logo { display: none; }
+  [data-mode="cli"] .sidebar { background: var(--sidebar); border-right: 1px dashed var(--border-strong); }
+  [data-mode="cli"] .new-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); box-shadow: none; font-weight: 500; font-size: 12.5px; }
+  [data-mode="cli"] .new-btn::before { content: "+ "; }
+  [data-mode="cli"] .new-btn svg { display: none; }
+  [data-mode="cli"] .new-btn:hover { background: var(--accent-soft); color: var(--accent); }
+  [data-mode="cli"] .group-label { font-size: 11px; letter-spacing: .04em; text-transform: none; color: var(--muted); }
+  [data-mode="cli"] .group-label::before { content: "# "; }
+  [data-mode="cli"] .item { font-size: 12.5px; border-radius: 0; padding: 5px 8px; color: var(--text-2); }
+  [data-mode="cli"] .item:hover { background: var(--hover); }
+  [data-mode="cli"] .item.active { background: var(--accent-soft); color: var(--accent); box-shadow: none; font-weight: 600; }
+  [data-mode="cli"] .item.active::before { content: "▸ "; }
+  [data-mode="cli"] .search { font-size: 12.5px; border-radius: 3px; box-shadow: none; background: var(--surface); }
+
+  /* Message stream */
+  [data-mode="cli"] .col { padding: 18px 22px 12px; }
+  [data-mode="cli"] .msg { margin: 0 0 14px; }
+  [data-mode="cli"] .msg.user { justify-content: flex-start; }
+  [data-mode="cli"] .msg.user .user-col { align-items: flex-start; max-width: 100%; }
+  [data-mode="cli"] .msg.user .bubble {
+    background: none; border: 0; box-shadow: none; padding: 0; border-radius: 0;
+    color: var(--accent); font-weight: 600; white-space: pre-wrap; max-width: 100%;
+  }
+  [data-mode="cli"] .msg.user .bubble::before { content: "user@volt:~$ "; color: var(--muted); font-weight: 500; }
+  [data-mode="cli"] .msg.assistant .body { padding-left: 0; }
+  [data-mode="cli"] .msg.assistant .body::before { content: "volt> "; color: var(--syn-title); font-weight: 700; }
+  [data-mode="cli"] .msg.assistant .text, [data-mode="cli"] .msg.assistant .md { color: var(--text); font-size: 13.5px; line-height: 1.6; }
+  [data-mode="cli"] .md h1, [data-mode="cli"] .md h2, [data-mode="cli"] .md h3, [data-mode="cli"] .md h4 {
+    font-family: var(--font-ui); color: var(--accent); font-weight: 700; letter-spacing: 0;
+  }
+  [data-mode="cli"] .md h2::before { content: "## "; color: var(--muted); }
+  [data-mode="cli"] .md h3::before { content: "### "; color: var(--muted); }
+  [data-mode="cli"] .md code:not(pre code) { background: var(--accent-soft); color: var(--accent); border: 0; padding: 0 4px; }
+  [data-mode="cli"] .md a { color: var(--syn-type); }
+  [data-mode="cli"] .md blockquote { border-left: 2px solid var(--accent); color: var(--text-2); }
+
+  /* Reasoning, status and typing */
+  [data-mode="cli"] details.think { font-size: 12px; }
+  [data-mode="cli"] details.think summary { background: none; border: 0; padding: 0; color: var(--muted); font-weight: 500; border-radius: 0; }
+  [data-mode="cli"] details.think summary::before { display: none; }
+  [data-mode="cli"] details.think summary::after { content: " [+]"; }
+  [data-mode="cli"] details.think[open] summary::after { content: " [-]"; }
+  [data-mode="cli"] details.think > div { background: none; border: 0; border-left: 2px solid var(--border-strong); border-radius: 0; padding: 4px 10px; font-size: 12px; }
+  [data-mode="cli"] .typing { color: var(--accent); }
+  [data-mode="cli"] .tlabel { font-size: 0; }
+  [data-mode="cli"] .tlabel::before { content: "processing"; font-size: 13px; }
+  [data-mode="cli"] .tlabel::after { content: "_"; animation: tcaret 1s steps(1) infinite; }
+  @keyframes tcaret { 50% { opacity: 0; } }
+  [data-mode="cli"] .typing .tdots { display: none; }
+
+  /* Code blocks as bordered terminal panels */
+  [data-mode="cli"] .code, [data-mode="cli"] .file-card, [data-mode="cli"] .file-src { border: 1px dashed var(--border-strong); }
+  [data-mode="cli"] .code-head { background: none; color: var(--muted); border-bottom: 1px dashed var(--border); padding: 4px 10px; }
+  [data-mode="cli"] .code-head::before { content: "┌─ "; color: var(--muted); }
+  [data-mode="cli"] .file-card { background: var(--surface); padding: 8px 10px; }
+  [data-mode="cli"] .file-badge { border-radius: 3px; background: var(--accent-soft); color: var(--accent); font-family: var(--font-ui); }
+  [data-mode="cli"] .file-name { color: var(--accent); font-weight: 600; }
+  [data-mode="cli"] .file-sub { color: var(--muted); }
+  [data-mode="cli"] .file-card button, [data-mode="cli"] .code-btns button, [data-mode="cli"] .actions button { border-radius: 3px; }
+
+  /* Action row: bracketed text commands */
+  [data-mode="cli"] .actions { opacity: 1; }
+  [data-mode="cli"] .actions button { background: none; border: 0; color: var(--muted); }
+  [data-mode="cli"] .textbtn { background: none !important; border: 0 !important; color: var(--muted); padding: 2px 6px; font-size: 11.5px; font-weight: 500; }
+  [data-mode="cli"] .textbtn::before { content: "["; }
+  [data-mode="cli"] .textbtn::after { content: "]"; }
+  [data-mode="cli"] .textbtn:hover { color: var(--accent); }
+  [data-mode="cli"] .actions .model-tag { background: none; border: 0; color: var(--muted); padding: 0; font-family: var(--font-ui); }
+
+  /* Composer as a prompt line */
+  [data-mode="cli"] .composer { background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 3px; padding: 10px 12px 8px 30px; box-shadow: none; }
+  [data-mode="cli"] .composer:focus-within { border-style: solid; border-color: var(--accent); box-shadow: none; }
+  [data-mode="cli"] .composer::before { content: "$"; left: 12px; top: 13px; font-size: 14px; }
+  [data-mode="cli"] .composer textarea { font-size: 13.5px; caret-color: var(--accent); }
+  [data-mode="cli"] .circle { border-radius: 3px; width: 30px; height: 30px; }
+  [data-mode="cli"] .circle.send { background: var(--accent); color: #04140e; }
+  [data-mode="cli"] .circle.send:hover { background: var(--accent-hover); color: #04140e; }
+  [data-mode="cli"] .toolbar { font-size: 12px; }
+  [data-mode="cli"] .model-select { border-radius: 3px; background: var(--surface); font-size: 11px; }
+  [data-mode="cli"] .think-toggle { border-radius: 3px; }
+
+  /* Empty state banner */
+  [data-mode="cli"] .empty { margin-top: 3vh; }
+  [data-mode="cli"] .empty p { color: var(--muted); font-size: 12.5px; }
+  [data-mode="cli"] .suggest button { border-radius: 3px; background: var(--surface); border: 1px dashed var(--border-strong); color: var(--text-2); font-size: 12.5px; }
+
+  /* Panel and dialogs */
+  [data-mode="cli"] dialog.sheet, [data-mode="cli"] .popover, [data-mode="cli"] .slash-pop { border-radius: 3px; border: 1px dashed var(--border-strong); box-shadow: none; }
+  [data-mode="cli"] .panel { border-left: 1px dashed var(--border-strong); background: var(--bg); }
+  [data-mode="cli"] .toast { border-radius: 3px; }
+
+  /* CLI: commands replace the model picker, thinking switch and status pills */
+  .cli-only { display: none; }
+  [data-mode="cli"] .cli-only, [data-mode="cli"] .top-actions .cli-only { display: inline-flex !important; }
+  [data-mode="cli"] .model-wrap, [data-mode="cli"] .think-toggle, [data-mode="cli"] .state-pills { display: none !important; }
+  .cli-out {
+    margin: 0 0 12px; padding: 14px 16px; max-height: 60vh; overflow: auto;
+    font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; white-space: pre;
+    background: var(--code-bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  dialog.cli-sheet { width: min(640px, calc(100vw - 32px)); }
+
+  /* =====================================================================
+     CLI: pure text. No boxes, buttons or panels. Everything is typed.
+     ===================================================================== */
+  [data-mode="cli"] body, [data-mode="cli"] html { background: var(--bg); }
+  [data-mode="cli"] .sidebar, [data-mode="cli"] .topbar, [data-mode="cli"] .toolbar,
+  [data-mode="cli"] .attach-row, [data-mode="cli"] .jump, [data-mode="cli"] .jump-btn,
+  [data-mode="cli"] .speaking, [data-mode="cli"] .scrim, [data-mode="cli"] .panel,
+  [data-mode="cli"] .suggest, [data-mode="cli"] .suggest-more, [data-mode="cli"] .actions,
+  [data-mode="cli"] .user-actions, [data-mode="cli"] .file-card, [data-mode="cli"] .file-src,
+  [data-mode="cli"] details.think, [data-mode="cli"] .typing .tdots, [data-mode="cli"] .alt-tabs,
+  [data-mode="cli"] .toast-wrap, [data-mode="cli"] #scrim, [data-mode="cli"] .scroll-jump,
+  [data-mode="cli"] .empty p, [data-mode="cli"] .menu-toggle, [data-mode="cli"] .code-head,
+  [data-mode="cli"] .code .code-btns, [data-mode="cli"] .code-btns { display: none !important; }
+
+  [data-mode="cli"] .app { background: var(--bg); }
+  [data-mode="cli"] .main, [data-mode="cli"] .chat-wrap { background: var(--bg); }
+  [data-mode="cli"] .chat { padding: 16px 24px 0; }
+  [data-mode="cli"] .col { max-width: 100%; padding: 0 0 12px; }
+  [data-mode="cli"] .msg { margin: 0 0 14px; }
+  [data-mode="cli"] .msg.user .bubble { background: none !important; border: 0; box-shadow: none; padding: 0; color: var(--accent); }
+  [data-mode="cli"] .msg.assistant .body { padding: 0; }
+  [data-mode="cli"] .typing { padding: 0; color: var(--muted); }
+  [data-mode="cli"] .tlabel { font-size: 13px; }
+
+  /* Code and command output as plain indented text */
+  [data-mode="cli"] .cli-file { margin: 8px 0 12px; }
+  [data-mode="cli"] .cli-file-head { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  [data-mode="cli"] .cli-code, [data-mode="cli"] .code pre { background: none; border: 0; padding: 0 0 0 16px; margin: 0; white-space: pre; overflow-x: auto; font-size: 12.8px; line-height: 1.6; color: var(--text); }
+  [data-mode="cli"] .cli-code code, [data-mode="cli"] .code code { background: none; border: 0; padding: 0; font: inherit; }
+  [data-mode="cli"] .cli-echo { margin: 10px 0 14px; white-space: pre-wrap; color: var(--text-2); font-size: 13px; line-height: 1.6; background: none; border: 0; padding: 0; }
+  [data-mode="cli"] .cli-echo-title { color: var(--accent); font-weight: 700; }
+  [data-mode="cli"] .md h1, [data-mode="cli"] .md h2, [data-mode="cli"] .md h3, [data-mode="cli"] .md h4 { font-family: var(--font-ui); font-size: 1em; color: var(--accent); }
+  [data-mode="cli"] .md table { font-size: 12.5px; }
+  [data-mode="cli"] .md blockquote { border: 0; padding: 0 0 0 12px; border-left: 2px solid var(--border-strong); }
+
+  /* Empty state: a one-line banner */
+  [data-mode="cli"] .empty { margin-top: 2vh; }
+  [data-mode="cli"] .empty h1 { font-size: 14px; font-weight: 500; color: var(--text); margin: 0 0 8px; }
+  [data-mode="cli"] .empty h1::before { font-size: 14px; }
+
+  /* Input: a bare prompt line, nothing else around it */
+  [data-mode="cli"] .composer-wrap { padding: 0 24px 18px; background: transparent; border: 0; }
+  [data-mode="cli"] .composer-inner { max-width: 100%; }
+  [data-mode="cli"] .composer {
+    display: flex; align-items: flex-start; gap: 0; position: relative;
+    background: none; border: 0; box-shadow: none; border-radius: 0; padding: 0; margin: 0;
+  }
+  [data-mode="cli"] .composer:focus-within { border: 0; box-shadow: none; }
+  [data-mode="cli"] .composer::before {
+    content: "user@volt:~$ "; position: static; left: auto; top: auto; white-space: pre;
+    color: var(--muted); font-weight: 600; font-size: 13.5px; line-height: 1.55; padding-top: 3px; flex-shrink: 0;
+  }
+  [data-mode="cli"] .composer textarea {
+    flex: 1; min-width: 0; min-height: 22px; padding: 2px 0 2px 0; border: 0; background: transparent;
+    font-size: 13.5px; line-height: 1.55; color: var(--accent); caret-color: var(--accent); resize: none;
+  }
+  [data-mode="cli"] .slash-pop { position: static !important; bottom: auto !important; left: auto !important; right: auto !important; margin: 0 0 6px; background: none; border: 0; box-shadow: none; padding: 0; max-height: none; }
+  [data-mode="cli"] .slash-item { background: none; color: var(--text-2); padding: 0; font-size: 12.5px; }
+  [data-mode="cli"] .slash-item .cmd { background: none; border: 0; padding: 0; color: var(--accent); }
+  [data-mode="cli"] .slash-foot, [data-mode="cli"] .slash-title { display: none; }
+  [data-mode="cli"] .toast { background: none; color: var(--accent); border: 0; box-shadow: none; padding: 0; font-size: 12.5px; }
+
+  /* ---------- Pinned messages ---------- */
+  .pin-bar {
+    display: flex; align-items: center; gap: 8px; padding: 7px 16px; flex-shrink: 0;
+    background: var(--surface); border-bottom: var(--rule); overflow-x: auto; scrollbar-width: none;
+  }
+  .pin-bar::-webkit-scrollbar { display: none; }
+  .pin-bar[hidden] { display: none; }
+  .pin-label { font-size: 11.5px; font-weight: 600; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+  .pin-chip {
+    display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; max-width: 300px;
+    background: var(--surface-2); border: var(--rule); border-radius: var(--pill); padding: 2px 4px 2px 2px;
+  }
+  .pin-go {
+    background: none; border: 0; padding: 3px 8px; font-size: 12px; color: var(--text-2);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 260px; text-align: left;
+  }
+  .pin-go:hover { color: var(--accent); }
+  .pin-who { font-weight: 600; color: var(--text); }
+  .pin-x { background: none; border: 0; color: var(--muted); padding: 0 6px; font-size: 15px; line-height: 1; border-radius: var(--pill); }
+  .pin-x:hover { color: var(--danger); }
+  .pin-ic { background: none; border: 0; color: var(--muted); padding: 4px; line-height: 0; border-radius: var(--pill); }
+  .pin-ic svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .pin-ic:hover { color: var(--accent); background: var(--accent-soft); }
+  .pin-ic.on { color: var(--accent); }
+  .pin-ic.on svg { fill: var(--accent-soft); }
+  .msg.pinned { box-shadow: inset 2px 0 0 var(--accent); padding-left: 12px; border-radius: 2px; }
+  .msg.user.pinned { box-shadow: none; padding-left: 0; }
+  .msg.pin-flash .bubble, .msg.pin-flash .body { animation: pinflash 1.4s ease; }
+  @keyframes pinflash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
+  .msg.pin-flash .bubble { border-radius: inherit; }
+  [data-mode="cli"] .pin-bar, [data-mode="cli"] .msg.pinned { display: none !important; box-shadow: none; padding-left: 0; }
+
+  /* Thinking dots: phase-locked from JS, so keep the bounce smooth */
+  .typing .tdots i { will-change: transform; }
+
+  /* Small way back to the GUI, shown only in CLI mode */
+  .gui-exit { display: none; }
+  [data-mode="cli"] .gui-exit {
+    display: inline-flex; position: fixed; top: 10px; right: 12px; z-index: 60;
+    align-items: center; background: var(--surface); color: var(--text-2);
+    border: 1px solid var(--border-strong); border-radius: 6px; padding: 3px 10px;
+    font: 600 11.5px/1.4 var(--font-ui); cursor: pointer;
+  }
+  [data-mode="cli"] .gui-exit:hover { color: var(--accent); border-color: var(--accent); }
+  [data-mode="cli"] .chat { padding-top: 34px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -1297,6 +1619,7 @@
       </div>
     </header>
 
+    <div class="pin-bar" id="pinBar" hidden></div>
     <div class="chat" id="chat"><div class="col" id="col"></div></div>
 
     <div class="composer-wrap">
@@ -1614,6 +1937,7 @@ function buildSystemPrompt() {
 
 /* ============================ DATA ============================ */
 const ICONS = {
+  pin: '<svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3H7l3-3z"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
   speaker: '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>',
@@ -1639,13 +1963,27 @@ function groupForModel(m) {
   return 'General';
 }
 
+/* Models that returned errors during testing. Matched against the model id, so vendor prefixes do not matter. */
+const BLOCKED_MODEL_HINTS = [
+  'gemma-4', 'nemotron-3-super', 'nemotron-3-ultra', 'nemotron-3.5-content-safety',
+  'nemotron-3.5-super-vl', 'nemotron-3-nano-omni', 'xing4', 'inkling'
+];
+function isBlockedModel(id) {
+  const s = (id || '').toLowerCase();
+  if (!s || s === AUTO_MODEL.id) return false;
+  return BLOCKED_MODEL_HINTS.some(h => s.includes(h)) || (prefs.badModels || []).includes(id);
+}
+function dropBlockedModels() {
+  for (let i = MODELS.length - 1; i >= 1; i--) if (isBlockedModel(MODELS[i].id)) MODELS.splice(i, 1);
+}
+
 async function loadFreeModels() {
   try {
     const r = await fetch('https://openrouter.ai/api/v1/models');
     if (!r.ok) throw new Error('catalogue unavailable');
     const { data } = await r.json();
     const free = data
-      .filter(m => m.id.endsWith(':free'))
+      .filter(m => m.id.endsWith(':free') && !isBlockedModel(m.id))
       .map(m => ({ group: groupForModel(m), id: m.id, name: (m.name || m.id).replace(/^[^:]*:\s*/, '') }))
       .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
     if (free.length) {
@@ -1655,6 +1993,7 @@ async function loadFreeModels() {
   } catch { /* keep fallback */ }
 
   // Drop a saved model that is no longer free or listed
+  if (isBlockedModel(prefs.model)) prefs.model = AUTO_MODEL.id;
   if (prefs.model && !MODELS.some(m => m.id === prefs.model) && prefs.model !== prefs.customId) {
     prefs.model = AUTO_MODEL.id;
     persist();
@@ -1746,6 +2085,7 @@ function ensureCurrent() {
   return c;
 }
 function newChat() {
+  cliEchoes = [];
   const empty = convos.find(x => x.messages.length === 0);
   if (empty) currentId = empty.id;
   else { const c = { id: newId(), title: 'New chat', messages: [], updated: Date.now() }; convos.unshift(c); currentId = c.id; }
@@ -1821,13 +2161,159 @@ $('settingsIcon').innerHTML = ICONS.gear;
 /* Command line mode: same conversation, terminal skin. */
 function applyMode() {
   document.documentElement.dataset.mode = prefs.cli ? 'cli' : 'chat';
+  els.input.placeholder = prefs.cli ? CLI_PLACEHOLDER : CHAT_PLACEHOLDER;
   const b = $('cliBtn');
   b.textContent = prefs.cli ? 'Chat' : 'CLI';
   b.setAttribute('aria-pressed', prefs.cli ? 'true' : 'false');
   b.title = prefs.cli ? 'Switch back to the chat interface' : 'Switch to the command line interface';
 }
+const CHAT_PLACEHOLDER = els.input.placeholder;
+const CLI_PLACEHOLDER = 'Type a message, / for skills, or :help for commands';
+const CLI_HELP = [
+  ['Type a message', 'Write something and press Enter to send.'],
+  ['/', 'Open the skills menu, or type /name, e.g. /writer.'],
+  [':help', 'Show this list.'],
+  [':new', 'Start a new chat.'],
+  [':chats', 'List your chats with numbers.'],
+  [':chat <number>', 'Open a chat from the list, e.g. :chat 2.'],
+  [':rename <title>', 'Rename the current chat.'],
+  [':delete', 'Delete the current chat.'],
+  [':models', 'List models with numbers.'],
+  [':model <number|name>', 'Switch model, e.g. :model 3 or :model nemotron.'],
+  [':skills', 'List skills.'],
+  [':skill <name|none>', 'Turn a skill on, or :skill none to turn them all off.'],
+  [':thinking on|off', 'Turn reasoning mode on or off.'],
+  [':web on|off', 'Turn web search on or off.'],
+  [':pin [number]', 'Pin the last answer, or a message by number.'],
+  [':pins', 'List pinned messages in this chat.'],
+  [':unpin <number>', 'Unpin a message from the :pins list.'],
+  [':files', 'List code files from this session.'],
+  [':save <number|name>', 'Download a code file, e.g. :save 1.'],
+  [':export md|html|json', 'Download the current chat.'],
+  [':settings', 'Open settings.'],
+  [':gui', 'Switch back to the chat interface.']
+];
+let cliEchoes = [];   /* command output shown as plain text under the transcript */
+let cliFiles = [];    /* code generated in CLI mode, saved with :save */
+function cliOut(title, text) {
+  cliEchoes.push(`<pre class="cli-echo"><span class="cli-echo-title">${esc(title)}</span>\n${esc(text)}</pre>`);
+  renderAll();
+}
+function cliFileHTML(name, text, lang, highlighted) {
+  let i = cliFiles.findIndex(f => f.name === name);
+  if (i < 0) { cliFiles.push({ name, text }); i = cliFiles.length - 1; } else cliFiles[i].text = text;
+  const lines = text.replace(/\n$/, '').split('\n').length;
+  return `<div class="cli-file"><div class="cli-file-head">── ${esc(name)} · ${lines} lines · :save ${i + 1}</div>` +
+    `<pre class="cli-code"><code class="hljs">${highlighted}</code></pre></div>`;
+}
+function openCliHelp() {
+  cliOut('CLI commands', CLI_HELP.map(([c, d]) => c.padEnd(24) + d).join('\n'));
+}
+function runCliCommand(raw) {
+  const [head = '', ...rest] = raw.slice(1).trim().split(/\s+/);
+  const cmd = head.toLowerCase();
+  const arg = rest.join(' ').trim();
+  const pad = (n, width) => String(n).padStart(width, ' ');
+  const onOff = v => /^(on|true|yes)$/i.test(v) ? true : /^(off|false|no)$/i.test(v) ? false : null;
+  switch (cmd) {
+    case 'help': case 'h': case '?': return openCliHelp();
+    case 'new': return newChat();
+    case 'chats': case 'ls': {
+      if (!convos.length) return cliOut('Chats', 'No chats yet. Type a message to start one.');
+      return cliOut('Chats', convos.map((c, i) =>
+        `${pad(i + 1, 3)}  ${c.id === currentId ? '*' : ' '} ${c.title || 'Untitled'}`).join('\n'));
+    }
+    case 'chat': case 'open': {
+      const n = parseInt(arg, 10);
+      const c = convos[n - 1];
+      if (!c) return toast(arg ? `No chat numbered ${arg}. Type :chats to see the list.` : 'Usage: :chat <number>');
+      return openChat(c.id);
+    }
+    case 'rename': {
+      const c = current();
+      if (!c) return toast('No chat is open.');
+      if (!arg) return toast('Usage: :rename <title>');
+      c.title = arg.slice(0, 80);
+      persist(); renderAll();
+      return toast('Renamed to ' + c.title);
+    }
+    case 'delete': return clearCurrentChat();
+    case 'models': return cliOut('Models', MODELS.map((m, i) =>
+      `${pad(i + 1, 3)}  ${m.id === selectedModel() ? '*' : ' '} ${m.name}  (${shortModel(m.id)})`).join('\n'));
+    case 'model': {
+      if (!arg) return toast('Usage: :model <number|name>. Type :models to see the list.');
+      const n = parseInt(arg, 10);
+      const byNumber = /^\d+$/.test(arg) ? MODELS[n - 1] : null;
+      const q = arg.toLowerCase();
+      const found = byNumber || MODELS.find(m => m.id.toLowerCase() === q) ||
+        MODELS.find(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
+      if (!found) return toast(`No model matches "${arg}". Type :models to see the list.`);
+      return setModel(found.id);
+    }
+    case 'skills': return cliOut('Skills', allSkills().map(s =>
+      `/${slashSlug(s).padEnd(14)} ${s.name}${s.desc ? '  ' + s.desc : ''}`).join('\n'));
+    case 'skill': {
+      if (!arg) return toast('Usage: :skill <name|none>. Type :skills to see the list.');
+      if (/^(none|default|off)$/i.test(arg)) return setSkill('none');
+      const q = arg.toLowerCase().replace(/^\//, '');
+      const sk = allSkills().find(x => x.id === q || slashSlug(x) === q);
+      if (!sk) return toast(`No skill called "${arg}". Type :skills to see the list.`);
+      return setSkill(sk.id);
+    }
+    case 'thinking': {
+      const want = onOff(arg);
+      if (want === null) return toast('Usage: :thinking on|off');
+      if ((prefs.thinking === true) !== want) toggleThinking();
+      return toast('Thinking ' + (want ? 'on' : 'off'));
+    }
+    case 'web': {
+      const want = onOff(arg);
+      if (want === null) return toast('Usage: :web on|off');
+      if (!!prefs.web !== want) toggleWeb();
+      return toast('Web search ' + (want ? 'on' : 'off'));
+    }
+    case 'pin': {
+      const c = current();
+      if (!c || !c.messages.length) return toast('Nothing to pin yet.');
+      let idx = /^\d+$/.test(arg) ? parseInt(arg, 10) - 1 : c.messages.length - 1;
+      while (idx >= 0 && !c.messages[idx]?.content) idx--;
+      const m = c.messages[idx];
+      if (!m) return toast('No message to pin.');
+      m.pinned = true; persist(); renderAll(false);
+      return toast('Pinned: ' + pinExcerpt(m));
+    }
+    case 'unpin': {
+      const items = pinnedItems();
+      const n = parseInt(arg, 10);
+      const hit = items[n - 1];
+      if (!hit) return toast(arg ? `No pin ${arg}. Type :pins to see the list.` : 'Usage: :unpin <number>');
+      hit.m.pinned = false; persist(); renderAll(false);
+      return toast('Unpinned.');
+    }
+    case 'pins': return cliOut('Pins', pinnedItems().length
+      ? pinnedItems().map(({ m }, k) => `${pad(k + 1, 3)}  ${m.role === 'user' ? 'You ' : 'Volt'}  ${pinExcerpt(m)}`).join('\n')
+      : 'No pinned messages in this chat. Type :pin to pin the last answer.');
+    case 'files': return cliOut('Files', cliFiles.length
+      ? cliFiles.map((f, i) => `${pad(i + 1, 3)}  ${f.name}  (${f.text.split('\n').length} lines)`).join('\n')
+      : 'No files yet. Ask for code and it will appear here.');
+    case 'save': {
+      const idx = /^\d+$/.test(arg) ? parseInt(arg, 10) - 1 : cliFiles.findIndex(f => f.name === arg);
+      const f = cliFiles[idx];
+      if (!f) return toast(arg ? `No file "${arg}". Type :files to see the list.` : 'Usage: :save <number|name>');
+      downloadFile({ name: f.name, text: f.text });
+      return toast('Saved ' + f.name);
+    }
+    case 'export': return exportChat(['md', 'html', 'json'].includes(arg.toLowerCase()) ? arg.toLowerCase() : 'md');
+    case 'settings': return openSettings();
+    case 'gui': case 'exit': return toggleCli();
+    default: return toast(`Unknown command :${cmd}. Type :help for the list.`);
+  }
+}
+
 function toggleCli() { prefs.cli = !prefs.cli; applyMode(); persist(); }
 $('cliBtn').addEventListener('click', toggleCli);
+$('guiExit').addEventListener('click', toggleCli);
+
 
 els.speakToggle.checked = !!prefs.speak;
 els.speakToggle.addEventListener('change', () => { prefs.speak = els.speakToggle.checked; persist(); if (!prefs.speak) stopSpeaking(); });
@@ -2237,10 +2723,10 @@ if (window.marked) {
       if (m && !fileName) fileName = m[1].split('/').pop();
       else if (!lang) lang = p;
     }
-    if (lang === 'mermaid') return `<div class="mermaid-box" data-mmd="${enc(raw)}"></div>`;
+    if (lang === 'mermaid') return prefs.cli ? `<pre class="cli-code">${esc(raw)}</pre>` : `<div class="mermaid-box" data-mmd="${enc(raw)}"></div>`;
     const highlighted = highlightCode(raw, lang);
     if (!fileName && lang !== 'mermaid') fileName = defaultFileName(lang);
-    if (fileName) return fileCardHTML(fileName, raw, lang, highlighted);
+    if (fileName) return prefs.cli ? cliFileHTML(fileName, raw, lang, highlighted) : fileCardHTML(fileName, raw, lang, highlighted);
     return `<div class="code"><div class="code-head"><span>${esc(lang || 'text')}</span>` +
       `<span class="code-btns">${snippetBtn(lang)}<button data-act="copycode">Copy</button></span></div><pre><code class="hljs">${highlighted}</code></pre></div>`;
   };
@@ -2272,6 +2758,50 @@ function greeting() {
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
+/* ---------- Pinned messages ---------- */
+function pinExcerpt(m) {
+  const raw = (m.shown ?? m.content ?? '').replace(/```[\s\S]*?```/g, ' [code] ').replace(/[*_#`>~\[\]]/g, '').replace(/\s+/g, ' ').trim();
+  return raw.length > 56 ? raw.slice(0, 55) + '…' : (raw || '(empty)');
+}
+function pinnedItems() {
+  const c = current();
+  if (!c) return [];
+  return c.messages.map((m, i) => ({ m, i })).filter(x => x.m.pinned);
+}
+function togglePin(m) {
+  m.pinned = !m.pinned;
+  persist();
+  renderAll(false);
+  toast(m.pinned ? 'Pinned to the top of this chat.' : 'Unpinned.');
+}
+function renderPinBar() {
+  const bar = $('pinBar');
+  const items = prefs.cli ? [] : pinnedItems();
+  bar.hidden = !items.length;
+  if (!items.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `<span class="pin-label">Pinned · ${items.length}</span>` + items.map(({ m, i }) =>
+    `<span class="pin-chip"><button type="button" class="pin-go" data-jump="${i}" title="Jump to this message">` +
+    `<span class="pin-who">${m.role === 'user' ? 'You' : 'Volt'}</span> ${esc(pinExcerpt(m))}</button>` +
+    `<button type="button" class="pin-x" data-unpin="${i}" title="Unpin" aria-label="Unpin">×</button></span>`).join('');
+}
+$('pinBar').addEventListener('click', e => {
+  const jump = e.target.closest('[data-jump]');
+  const unpin = e.target.closest('[data-unpin]');
+  const c = current();
+  if (unpin && c) {
+    const m = c.messages[+unpin.dataset.unpin];
+    if (m) togglePin(m);
+    return;
+  }
+  if (jump) {
+    const el = els.col.querySelector(`.msg[data-index="${jump.dataset.jump}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.remove('pin-flash'); void el.offsetWidth; el.classList.add('pin-flash');
+    setTimeout(() => el.classList.remove('pin-flash'), 1600);
+  }
+});
+
 function renderAll(scrollBottom = true) {
   const c = current();
   els.title.textContent = c && c.messages.length ? c.title : 'New chat';
@@ -2287,6 +2817,8 @@ function renderAll(scrollBottom = true) {
     renderMath(els.col);
     renderMermaid(els.col);
   }
+  if (prefs.cli && cliEchoes.length) els.col.insertAdjacentHTML('beforeend', cliEchoes.join(''));
+  renderPinBar();
   renderList();
   if (scrollBottom) els.chat.scrollTop = els.chat.scrollHeight;
   requestAnimationFrame(updateJump);
@@ -2309,7 +2841,7 @@ function titleFor(text) {
 function buildMsg(m, i) {
   const ts = m.ts ? `<span class="ts">${fmtTime(m.ts)}</span>` : '';
   if (m.role === 'user') {
-    return `<div class="msg user" data-index="${i}"><div class="user-col">${m.images?.length ? `<div class="imgs">${m.images.map(src => `<img src="${src}" alt="Attached image" />`).join('')}</div>` : ''}<div class="bubble">${esc(m.shown ?? m.content)}</div><div class="user-actions">${ts}<button class="textbtn" data-act="edit">Edit</button></div></div></div>`;
+    return `<div class="msg user${m.pinned ? ' pinned' : ''}" data-index="${i}"><div class="user-col">${m.images?.length ? `<div class="imgs">${m.images.map(src => `<img src="${src}" alt="Attached image" />`).join('')}</div>` : ''}<div class="bubble">${esc(m.shown ?? m.content)}</div><div class="user-actions">${ts}<button class="pin-ic${m.pinned ? ' on' : ''}" data-act="pin" title="${m.pinned ? 'Unpin' : 'Pin message'}">${ICONS.pin}</button><button class="textbtn" data-act="edit">Edit</button></div></div></div>`;
   }
   const done = !busy || i !== current().messages.length - 1;
   const meta = [];
@@ -2318,6 +2850,7 @@ function buildMsg(m, i) {
   const actions = m.content && done
     ? `<div class="actions">
          <button data-act="copy" title="Copy">${ICONS.copy}</button>
+         <button data-act="pin" class="pin-ic${m.pinned ? ' on' : ''}" title="${m.pinned ? 'Unpin' : 'Pin message'}">${ICONS.pin}</button>
          <button data-act="speak" title="Read aloud">${ICONS.speaker}</button>
          <button data-act="retry" title="Regenerate">${ICONS.retry}</button>
          <button data-act="up" class="${m.vote === 1 ? 'voted' : ''}" title="Good answer">${ICONS.up}</button>
@@ -2329,7 +2862,7 @@ function buildMsg(m, i) {
          <button class="textbtn" data-act="compare" title="Answer this again with two other models">Compare models</button>
          ${ts}${meta.length ? `<span class="model-tag">${meta.join(' \u00b7 ')}</span>` : ''}
        </div>` : '';
-  return `<div class="msg assistant${done ? ' done' : ''}" data-index="${i}"><div class="body">${bodyHTML(m)}</div>${actions}</div>`;
+  return `<div class="msg assistant${done ? ' done' : ''}${m.pinned ? ' pinned' : ''}" data-index="${i}"><div class="body">${bodyHTML(m)}</div>${actions}</div>`;
 }
 
 function bodyHTML(m) {
@@ -2347,7 +2880,12 @@ function bodyHTML(m) {
     h += `<details class="think"${src.content ? '' : ' open'}><summary>Reasoning${secs}</summary><div>${esc(src.reasoning)}</div></details>`;
   }
   if (src.content) h += md(src.content);
-  else if (!src.error) h += '<span class="typing"><i></i><i></i><i></i></span>';
+  else if (!src.error) {
+    /* Negative delays tie each dot to the wall clock, so re-rendering the body does not restart the bounce. */
+    const t = Date.now();
+    const dots = [0, 1, 2].map(k => `<i style="animation-delay:-${(t + k * 160) % 1200}ms"></i>`).join('');
+    h += `<span class="typing" role="status" aria-label="Volt is thinking"><span class="tlabel" style="animation-delay:-${t % 1800}ms">Thinking</span><span class="tdots">${dots}</span></span>`;
+  }
   return h;
 }
 
@@ -2471,6 +3009,7 @@ els.col.addEventListener('click', async e => {
   const m = msgEl ? current().messages[+msgEl.dataset.index] : null;
   const act = btn.dataset.act;
 
+  if (act === 'pin' && m) { togglePin(m); return; }
   if (act === 'shuffle') { SUGGESTIONS = shuffled(SUGGESTION_POOL).slice(0, 4); return renderAll(false); }
   if (act === 'fpreview' && fileStore.has(btn.dataset.fid)) openPreview(fileStore.get(btn.dataset.fid).name, fileStore.get(btn.dataset.fid).text);
   if (act === 'cpreview' || act === 'crun') previewCodeBlock(btn, btn.closest('.code').querySelector('.code-head span').textContent.trim());
@@ -2670,6 +3209,13 @@ async function runAssistant(assistantMsg) {
     } else {
       assistantMsg.error = true;
       assistantMsg.content = `**Error:** ${err.message}`;
+      const failed = assistantMsg.model;
+      if (failed && failed !== AUTO_MODEL.id && failed !== prefs.customId) {
+        prefs.badModels = [...new Set([...(prefs.badModels || []), failed])];
+        dropBlockedModels();
+        if (prefs.model === failed) prefs.model = AUTO_MODEL.id;
+        buildModelSelect();
+      }
     }
   } finally {
     setBusy(false);
@@ -2684,6 +3230,11 @@ async function runAssistant(assistantMsg) {
 
 async function send(text) {
   text = (text ?? els.input.value).trim();
+  if (prefs.cli && text.startsWith(':')) {
+    els.input.value = ''; autosize();
+    return runCliCommand(text);
+  }
+  if (prefs.cli) cliEchoes = [];
   if ((!text && !pending.length) || busy) return;
   if (!text) text = 'Please review the attached file(s).';
   stopSpeaking();
@@ -3350,6 +3901,7 @@ $('jumpLatest').addEventListener('click', () => els.chat.scrollTo({ top: els.cha
 
 /* ============================ CHAT HELPERS ============================ */
 function openChat(id) {
+  cliEchoes = [];
   if (busy) abortCtrl?.abort();
   currentId = id;
   resetPanelFiles();
@@ -3794,5 +4346,6 @@ autosize();
 updateJump();
 persist();
 </script>
+<button type="button" class="gui-exit" id="guiExit" title="Switch back to the chat interface">GUI</button>
 </body>
 </html>
