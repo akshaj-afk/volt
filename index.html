@@ -1744,6 +1744,12 @@
     </section>
 
     <section>
+      <div class="set-label">Web search</div>
+      <label class="set-field">SearXNG address<input type="url" id="setSearxng" placeholder="https://your-searxng.example" spellcheck="false" /></label>
+      <p class="set-hint">Optional. Volt searches Wikipedia all the time, and also checks your SearXNG when this is set. Your SearXNG must allow JSON output and browser access.</p>
+    </section>
+
+    <section>
       <div class="set-label">Responses</div>
       <div class="set-row"><span>Creativity<span class="sub">Low is focused, high is exploratory</span></span>
         <span style="display:inline-flex;align-items:center;gap:10px"><input type="range" id="setTemp" min="0" max="1.5" step="0.1" /><b class="set-num" id="tempVal">1.0</b></span>
@@ -2058,9 +2064,11 @@ const PREF_DEFAULTS = { theme: 'system', size: 'normal', width: 'normal', temp: 
 for (const k in PREF_DEFAULTS) if (prefs[k] === undefined) prefs[k] = PREF_DEFAULTS[k];
 prefs.profile = Object.assign({ name: '', role: '', notes: '' }, prefs.profile);
 if (!Array.isArray(prefs.memory)) prefs.memory = [];
-// Web search is billed by OpenRouter per search, so keep it OFF by default.
+// Wikipedia search is free, but keep it OFF by default so answers only change when asked.
 // The version flag resets it once for users who had it on from an earlier build.
-if (prefs.webVersion !== 2) { prefs.web = false; prefs.webVersion = 2; }
+if (prefs.webVersion !== 3) { prefs.web = true; prefs.webVersion = 3; }
+prefs.web = true; /* Wikipedia search stays on at all times */
+if (typeof prefs.searxng !== 'string') prefs.searxng = '';
 let convos = JSON.parse(localStorage.getItem('volt_convos') || '[]');
 let sideTab = prefs.sideTab === 'files' ? 'files' : 'chats';
 let currentId = convos[0]?.id || null;
@@ -3104,6 +3112,57 @@ function setBusy(v) {
 /* Streams one reply. assistantMsg is the message excluded from the context;
    opts.target is the object the text accumulates into (an alt answer when
    comparing models) and opts.render decides what gets painted. */
+/* ---------- Wikipedia search (free, no key, CORS enabled) ---------- */
+async function searxContext(question, signal) {
+  const base = (prefs.searxng || '').trim().replace(/\/+$/, '');
+  if (!base) return [];
+  try {
+    const r = await fetch(base + '/search?format=json&language=en&q=' + encodeURIComponent(question), { signal });
+    if (!r.ok) return [];
+    const results = ((await r.json()).results || []).filter(x => x.url && x.title).slice(0, 3);
+    return results.map(x => ({ title: x.title, url: x.url, text: (x.content || '').replace(/\s+/g, ' ').trim().slice(0, 600) }));
+  } catch {
+    return [];
+  }
+}
+async function webContext(question) {
+  const q = (question || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!q) return '';
+  const signal = AbortSignal.timeout ? AbortSignal.timeout(7000) : undefined;
+  const [sx, wk] = await Promise.all([searxContext(q, signal), wikiContext(q)]);
+  const blocks = [...sx.map(x => `${x.title} (${x.url})\n${x.text || 'No summary available.'}`)];
+  if (wk) blocks.push(...wk.split(/\n\n(?=\[)/).map(b => b.replace(/^\[\d+\]\s*/, '')));
+  return blocks.map((b, i) => `[${i + 1}] ${b}`).join('\n\n');
+}
+async function wikiContext(question) {
+  const q = (question || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!q) return '';
+  try {
+    const signal = AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined;
+    const sr = await fetch('https://en.wikipedia.org/w/api.php?action=query&list=search&srlimit=3&format=json&origin=*&srsearch=' + encodeURIComponent(q), { signal });
+    if (!sr.ok) return '';
+    const hits = ((await sr.json()).query?.search || []).slice(0, 3);
+    if (!hits.length) return '';
+    const titles = hits.map(h => h.title).join('|');
+    const er = await fetch('https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&exlimit=max&format=json&origin=*&titles=' + encodeURIComponent(titles), { signal });
+    const pages = er.ok ? Object.values((await er.json()).query?.pages || {}) : [];
+    const byTitle = new Map(pages.map(pg => [pg.title, pg.extract || '']));
+    const blocks = hits.map((h, i) => {
+      const url = 'https://en.wikipedia.org/wiki/' + encodeURIComponent(h.title.replace(/ /g, '_'));
+      const text = (byTitle.get(h.title) || '').replace(/\s+/g, ' ').trim().slice(0, 900);
+      return `[${i + 1}] ${h.title} (${url})\n${text || 'No summary available.'}`;
+    });
+    return blocks.join('\n\n');
+  } catch {
+    return '';
+  }
+}
+function webPromptFor(results) {
+  if (!results) return '\n\nWeb search was on, but it returned nothing for this question. Answer from your own knowledge and say so if the answer may be out of date.';
+  return '\n\nWeb search results for the latest question (Wikipedia and SearXNG):\n' + results +
+    '\n\nUse these results when they are relevant. Cite the links you use in square brackets, for example [1], and list them at the end under "Sources". This overrides the rule above about not naming sources. Say when these sources may not cover recent events.';
+}
+
 async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const c = current();
   const tgt = opts.target || assistantMsg;
@@ -3119,6 +3178,9 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const ctrl = new AbortController();
   if (opts.alt) compareCtrls.push(ctrl); else abortCtrl = ctrl;
 
+  const lastUser = [...c.messages].reverse().find(m => m.role === 'user' && m !== assistantMsg);
+  const webNote = prefs.web ? webPromptFor(await webContext(lastUser?.shown ?? lastUser?.content ?? '')) : '';
+
   // Calls our own serverless route, which adds the secret key on the server.
   const res = await fetch('/api/chat', {
     method: 'POST',
@@ -3128,8 +3190,7 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
       stream: true,
       reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
       ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
-      ...(prefs.web ? { plugins: [{ id: 'web' }] } : {}),
-      messages: [{ role: 'system', content: buildSystemPrompt() }, ...payloadMessages]
+      messages: [{ role: 'system', content: buildSystemPrompt() + webNote }, ...payloadMessages]
     }),
     signal: ctrl.signal
   });
@@ -3576,7 +3637,7 @@ function renderStatePills() {
     pills.push(`<span class="pill">${esc(skill.name)}<button data-clear-skill title="Remove skill" aria-label="Remove skill">${XICON}</button></span>`);
   }
   if (prefs.web) {
-    pills.push(`<span class="pill">Web search<button data-clear-web title="Turn off web search" aria-label="Turn off web search">${XICON}</button></span>`);
+    pills.push('<span class="pill">Web search</span>');
   }
   $('statePills').innerHTML = pills.join('');
 }
@@ -3590,7 +3651,7 @@ function renderPopover() {
   $('popover').innerHTML = `
     <div class="pop-label">Connectors</div>
     <button class="pop-item" data-act="web">
-      <span>Web search<span class="sub">Let Volt look things up online</span></span>
+      <span>Web search<span class="sub">Always on: Wikipedia and your SearXNG</span></span>
       <span class="switch"><input type="checkbox" tabindex="-1" ${prefs.web ? 'checked' : ''}/><span class="slider"></span></span>
     </button>
     <button class="pop-item" data-act="attach">
@@ -3622,7 +3683,7 @@ $('popover').addEventListener('click', e => {
   const sk = e.target.closest('[data-skill]');
   if (sk) { prefs.skill = sk.dataset.skill; persist(); renderPopover(); renderStatePills(); return; }
   const act = e.target.closest('[data-act]')?.dataset.act;
-  if (act === 'web') { prefs.web = !prefs.web; persist(); renderPopover(); renderStatePills(); }
+  if (act === 'web') { toggleWeb(); }
   if (act === 'attach') { togglePopover(false); $('fileInput').click(); }
   if (act === 'newskill') { togglePopover(false); openSkillDialog(); }
   if (act === 'editskill') { togglePopover(false); openSkillDialog(allSkills().find(s => s.id === prefs.skill)); }
@@ -3932,11 +3993,11 @@ function setModel(id) {
   toast('Model set to ' + (MODELS.find(m => m.id === id)?.name || id));
 }
 function toggleWeb() {
-  prefs.web = !prefs.web;
+  prefs.web = true;
   persist();
   renderStatePills();
   renderPopover();
-  toast(prefs.web ? 'Web search on — Volt can look things up.' : 'Web search off.');
+  toast('Web search is always on.');
 }
 function toggleSpeakPref() {
   prefs.speak = !prefs.speak;
@@ -3977,7 +4038,7 @@ function paletteCommands() {
     { group: 'Commands', label: `Theme: ${prefs.theme || 'system'} → next`, run: cycleTheme },
     { group: 'Commands', label: prefs.cli ? 'Chat interface' : 'Command line interface', run: toggleCli },
     { group: 'Commands', label: prefs.thinking ? 'Thinking: on — turn off' : 'Thinking: off — turn on', hint: 'Alt T', run: toggleThinking },
-    { group: 'Commands', label: prefs.web ? 'Web search: on — turn off' : 'Web search: off — turn on', run: toggleWeb },
+    { group: 'Commands', label: prefs.web ? 'Wikipedia search: on — turn off' : 'Wikipedia search: off — turn on', run: toggleWeb },
     { group: 'Commands', label: prefs.speak ? 'Read replies aloud: on — turn off' : 'Read replies aloud: off — turn on', run: toggleSpeakPref },
     { group: 'Commands', label: prefs.showReasoning === false ? 'Show reasoning' : 'Hide reasoning', run: toggleReasonPref },
     { group: 'Commands', label: 'Attach a file', run: () => $('fileInput').click() },
@@ -4124,6 +4185,8 @@ $('setSpeak').addEventListener('change', e => { prefs.speak = e.target.checked; 
 $('setReason').addEventListener('change', e => { prefs.showReasoning = e.target.checked; reasonToggle.checked = e.target.checked; persist(); renderAll(false); });
 $('setAutoPrev').addEventListener('change', e => { prefs.autoPreview = e.target.checked; persist(); });
 $('setVoice').addEventListener('change', e => { prefs.voice = e.target.value; persist(); });
+$('setSearxng').value = prefs.searxng || '';
+$('setSearxng').addEventListener('change', e => { prefs.searxng = e.target.value.trim().replace(/\/+$/, ''); persist(); toast(prefs.searxng ? 'SearXNG saved.' : 'SearXNG cleared.'); });
 $('testVoice').addEventListener('click', () => speak('Hello, this is how I will read answers aloud to you.', true));
 
 /* Memory: short facts the model keeps across every chat */
