@@ -1969,10 +1969,17 @@ const BLOCKED_MODEL_HINTS = [
   'gemma-4', 'nemotron-3-super', 'nemotron-3-ultra', 'nemotron-3.5-content-safety',
   'nemotron-3.5-super-vl', 'nemotron-3-nano-omni', 'xing4', 'inkling'
 ];
+/* Classifiers and moderation models only output labels such as "User Safety: Safe", so they are not chat models. */
+const NON_CHAT_MODEL = /safety|guard|moderat|classif|embed|rerank|whisper|speech|tts/;
 function isBlockedModel(id) {
   const s = (id || '').toLowerCase();
   if (!s || s === AUTO_MODEL.id) return false;
-  return BLOCKED_MODEL_HINTS.some(h => s.includes(h)) || (prefs.badModels || []).includes(id);
+  return BLOCKED_MODEL_HINTS.some(h => s.includes(h)) || NON_CHAT_MODEL.test(s) || (prefs.badModels || []).includes(id);
+}
+/* A reply that is only a safety label means the model answered as a classifier. */
+function looksLikeClassifier(text) {
+  const t = (text || '').trim();
+  return /^(user|response|assistant|prompt)\s+safety\s*:/i.test(t) || /^(safe|unsafe)\.?$/i.test(t);
 }
 function dropBlockedModels() {
   for (let i = MODELS.length - 1; i >= 1; i--) if (isBlockedModel(MODELS[i].id)) MODELS.splice(i, 1);
@@ -3202,6 +3209,9 @@ async function runAssistant(assistantMsg) {
   const bodyEl = els.col.querySelector(`.msg[data-index="${c.messages.indexOf(assistantMsg)}"] .body`);
   try {
     await streamInto(assistantMsg, bodyEl);
+    if (looksLikeClassifier(assistantMsg.content)) {
+      throw new Error('This model returned a safety label instead of a reply, so it is not a chat model. It has been removed from the list. Send your message again.');
+    }
     if (!assistantMsg.content) assistantMsg.content = '_No response received. Try another model._';
     if (prefs.speak) speak(assistantMsg.content);
   } catch (err) {
