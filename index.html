@@ -3614,13 +3614,13 @@ $('attachRow').addEventListener('click', e => {
   if (b) { pending.splice(+b.dataset.rm, 1); renderAttachments(); }
 });
 
-const MAX_TEXT_FILE = 300_000;
+const MAX_TEXT_FILE = 1_000_000_000; /* 1 GB */
 async function addFiles(list) {
   const files = [...(list || [])];
   let added = 0;
   for (const f of files) {
     const isImage = f.type.startsWith('image/');
-    if (!isImage && f.size > MAX_TEXT_FILE) { toast(`${f.name} is larger than 300 KB, so it was skipped.`); continue; }
+    if (!isImage && f.size > MAX_TEXT_FILE) { toast(`${f.name} is larger than 1 GB, so it was skipped.`); continue; }
     if (pending.length >= 6) { toast('Up to 6 attachments per message.'); break; }
     try {
       if (isImage) pending.push({ name: f.name, image: await shrinkImage(f) });
