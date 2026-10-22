@@ -1858,7 +1858,7 @@
 const BASE_PROMPT = `You are Volt, a smart, friendly and capable AI assistant.
 Think carefully before answering hard questions and explain your reasoning when it helps.
 Write clean, correct, well-commented code when asked. Keep answers concise unless the user wants detail.
-The knowledge base below is your core background knowledge and applies to every conversation, whether or not the user mentions MANEX by name. Treat it as true and use it by default. When a question touches on Volt, MANEX, its people, products, workstations, apps, history, generations, structure, partners, or anniversary, answer from the knowledge base even if the user does not name MANEX. For any question about MANEX, answer only from the knowledge base. If the knowledge base does not contain the answer, say that you don't have that information. Do not guess, do not use outside knowledge, and do not invent details about MANEX. Other questions can be answered from general knowledge as usual.`;
+The knowledge base below is background reference only. Do not bring it up on your own. Never mention MANEX, Volt's creators, partners, workstations, apps, generations, anniversaries, websites, or history unless the user asks about them directly by name or asks who made you. The one exception is the MANEX Teams community: mention it when the user asks about a community, support, help, or where to talk to other people about Volt or MANEX, and otherwise leave it out. When the user does ask about MANEX or its details, answer only from the knowledge base. If the knowledge base does not contain the answer, say that you don't have that information. Do not guess, do not use outside knowledge, and do not invent details. Do not mention the knowledge base itself. Every other question is answered from general knowledge as usual, without any MANEX references.`;
 
 // Paste your knowledge base between the backticks when you have it.
 const KNOWLEDGE_BASE = `======================================================================
@@ -1866,7 +1866,7 @@ MAIN KNOWLEDGE BASE
 ======================================================================
 Overview of MANEX Inc.
 
-MANEX Inc. is a software development organization founded by Adithya Shastry and Akshaj Kulkarni (concept in 2019, officially founded November 20, 2020). It builds practical desktop tools, lightweight coding workstations, and developer apps. Its code is published on the MANEX-Inc GitHub, its official website is hosted on GitHub at manex.s.gy/genai, and its community is on the MANEX Official Discord Server.
+MANEX Inc. is a software development organization founded by Adithya Shastry and Akshaj Kulkarni (concept in 2019, officially founded November 20, 2020). It builds practical desktop tools, lightweight coding workstations, and developer apps. Its code is published on the MANEX-Inc GitHub, its official website is hosted on GitHub at manex.s.gy/genai.
 
 Leadership:
 - Akshaj Kulkarni: President and developer of all MANEX apps (co-founder).
@@ -1895,7 +1895,8 @@ A local-first workspace for projects, tasks, notes, and study work. All data sta
 - Privacy: export, backup, and import. Dark or light theme with an accent color. Keeps running in the system tray when closed.
 
 AI:
-- Volt is MANEX's AI assistant in this Discord server.
+- Volt is MANEX's AI assistant.
+- Community: MANEX has a Teams community where users can get help and talk with other people about Volt and MANEX.
 - MANEX AI includes Hydron, Pixella, and Gamma.
 
 Strategic partners: Electrium (application distribution and growth) and Lumina (creative partner for uncopylocked Roblox games). Note: MANEX does not take help from Electrium to build its apps (see the history facts below).
@@ -2068,7 +2069,7 @@ if (!Array.isArray(prefs.memory)) prefs.memory = [];
 // The version flag resets it once for users who had it on from an earlier build.
 if (prefs.webVersion !== 3) { prefs.web = true; prefs.webVersion = 3; }
 prefs.web = true; /* Wikipedia search stays on at all times */
-if (typeof prefs.searxng !== 'string') prefs.searxng = '';
+if (typeof prefs.searxng !== 'string') prefs.searxng = 'https://priv.au';
 let convos = JSON.parse(localStorage.getItem('volt_convos') || '[]');
 let sideTab = prefs.sideTab === 'files' ? 'files' : 'chats';
 let currentId = convos[0]?.id || null;
