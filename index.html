@@ -130,9 +130,6 @@
   @keyframes squish { 0%, 100% { transform: scaleY(1); } 40% { transform: scaleY(1.35) scaleX(.85); } }
   .btn, button { transition: background-color .15s, color .15s, border-color .15s; }
   button:active:not(:disabled) { transform: translateY(1px); }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  }
 
   /* Small uppercase label used above every block of the transcript and panel. */
   .label {
@@ -1252,9 +1249,6 @@
     30% { transform: translateY(-4px); opacity: .9; }
   }
   @keyframes tpulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) {
-    .tlabel, .typing .tdots i { animation: none; }
-  }
 
   /* Reasoning block: quieter and aligned with the text column */
   details.think { margin-bottom: 10px; }
@@ -1577,9 +1571,6 @@
 
   [data-mode="cli"] .torb { display: none; }
   [data-mode="cli"] .tl { animation: none; }
-  @media (prefers-reduced-motion: reduce) {
-    .torb i, .torb b, .tl { animation: none; }
-  }
 
   /* Bouncing dots: keyframes are global and the dots carry their own inline styles, so nothing overrides them */
   @keyframes voltdot {
@@ -1593,6 +1584,22 @@
   .inline-ui { margin: 10px 0 6px; border: var(--rule); border-radius: var(--radius-lg); overflow: hidden; background: #fff; }
   .inline-frame { display: block; width: 100%; border: 0; background: #fff; }
   [data-mode="cli"] .inline-ui { display: none; }
+
+  /* Thunderbolt thinking indicator: flickers and glows. Always animates (not tied to Windows animation settings). */
+  .typing .tbolt {
+    display: inline-flex; width: 16px; height: 16px; flex-shrink: 0; color: var(--accent);
+    animation: tflicker 1.2s ease-in-out infinite;
+  }
+  .typing .tbolt svg { width: 100%; height: 100%; fill: currentColor; }
+  @keyframes tflicker {
+    0%, 100% { opacity: .45; transform: scale(.9); filter: drop-shadow(0 0 0 transparent); }
+    20% { opacity: 1; transform: scale(1.12); filter: drop-shadow(0 0 4px var(--accent)); }
+    35% { opacity: .6; transform: scale(.97); }
+    50% { opacity: 1; transform: scale(1.06); filter: drop-shadow(0 0 3px var(--accent)); }
+  }
+  .typing .tlabel { animation: none; }
+  .tl { animation: tletter 1.4s ease-in-out infinite; }
+  [data-mode="cli"] .tbolt { display: none; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -3011,7 +3018,7 @@ function bodyHTML(m) {
     const dots = [0, 1, 2].map(k => `<i style="${dotStyle(k)}"></i>`).join('');
     /* Each letter and the pulse ring get a clock-based delay, so re-rendering keeps the motion smooth. */
     const word = [...'Thinking'].map((ch, k) => `<span class="tl" style="animation-delay:-${(t + k * 90) % 1400}ms">${ch}</span>`).join('');
-    const orb = `<span class="torb" aria-hidden="true"><b style="animation-delay:-${t % 1600}ms"></b><i style="animation-delay:-${t % 1600}ms"></i></span>`;
+    const orb = `<span class="tbolt" aria-hidden="true" style="animation-delay:-${t % 1200}ms"><svg viewBox="0 0 24 24"><path d="M13.5 1.5 4 13.5h6.5L9 22.5 20 9.5h-6.8z"/></svg></span>`;
     h += `<span class="typing" role="status" aria-label="Volt is thinking">${orb}<span class="tlabel">${word}</span><span class="tdots">${dots}</span></span>`;
   }
   return h;
