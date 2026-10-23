@@ -1618,6 +1618,11 @@
   .thunder.on { display: block; animation: none; }
   .thunder svg { height: 100%; }
   .thunder path, .thunder polyline { filter: none; }
+
+  /* Switches: the hidden checkbox covers the whole switch, so a click anywhere on it toggles the setting */
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
+  .switch .slider { pointer-events: none; }
+  .pop-item .switch input, .pop-item .switch { pointer-events: none; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
