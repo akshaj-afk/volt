@@ -1600,6 +1600,19 @@
   .typing .tlabel { animation: none; }
   .tl { animation: tletter 1.4s ease-in-out infinite; }
   [data-mode="cli"] .tbolt { display: none; }
+
+  /* Thunder strike: a bolt drops from the top of the screen to the chat box when Volt answers */
+  .thunder { position: fixed; inset: 0; pointer-events: none; z-index: 45; display: none; }
+  .thunder.on { display: block; animation: boltFade .9s ease-out forwards; }
+  .thunder svg { position: absolute; left: 0; top: 0; width: 100%; height: 82%; overflow: visible; }
+  .thunder path { fill: none; stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.4; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px var(--accent)); }
+  .thunder .bolt-main { stroke-dasharray: 100; stroke-dashoffset: 100; animation: boltDraw .28s ease-out forwards; }
+  .thunder .bolt-branch { stroke-width: 1.6; stroke-dasharray: 100; stroke-dashoffset: 100; animation: boltDraw .2s ease-out .12s forwards; }
+  .thunder-flash { position: absolute; inset: 0; background: var(--accent); opacity: 0; animation: boltFlash .55s ease-out; }
+  @keyframes boltDraw { to { stroke-dashoffset: 0; } }
+  @keyframes boltFlash { 0% { opacity: .16; } 12% { opacity: .05; } 25% { opacity: .12; } 100% { opacity: 0; } }
+  @keyframes boltFade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+  [data-mode="cli"] .thunder { display: none !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -1806,6 +1819,9 @@
       <div class="set-row"><span>Creativity<span class="sub">Low is focused, high is exploratory</span></span>
         <span style="display:inline-flex;align-items:center;gap:10px"><input type="range" id="setTemp" min="0" max="1.5" step="0.1" /><b class="set-num" id="tempVal">1.0</b></span>
       </div>
+      <div class="set-row"><span>Shakespearean English<span class="sub">Volt answers in the style of Shakespeare</span></span>
+        <span class="switch"><input type="checkbox" id="setShakes" /><span class="slider"></span></span>
+      </div>
       <div class="set-row"><span>Reply aloud when Volt answers</span>
         <span class="switch"><input type="checkbox" id="setSpeak" /><span class="slider"></span></span>
       </div>
@@ -1902,6 +1918,7 @@
 <div class="menu-pop" id="menuPop" hidden></div>
 </div>
 
+<div class="thunder" id="thunder" aria-hidden="true"><div class="thunder-flash"></div><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path class="bolt-main" pathLength="100" d="M50 0 L44 26 L57 30 L40 58 L54 62 L46 84 L58 86 L50 100" /><path class="bolt-branch" pathLength="100" d="M44 26 L30 38 L36 42 L24 56" /></svg></div>
 <button type="button" class="gui-exit" id="guiExit" title="Switch back to the chat interface">GUI</button>
 <script>
 /* The OpenRouter key is NOT in this file. It lives in Vercel as
@@ -1984,6 +2001,9 @@ function buildSystemPrompt() {
   p += `\n\nInterfaces: Whenever the user asks for an app, interface, UI, mock-up, form, dashboard, page, animation, calculator, tool or game, build it as one complete self-contained HTML file (inline CSS and JS, no external assets unless the user asks) in a fenced \`\`\`html page-name.html block. The app previews it live inside the chat window and lets the user download it, so the interface must work immediately. Keep it working on the first try: no placeholders, no TODOs. Quizzes, polls, games, calculators and other small interactive pieces belong right in the chat, so make them an html block; they appear inline in the conversation. Never tell the user to open a file to use them.`;
   p += `\n\nMemory: You also have a short list of remembered facts below. When the user explicitly asks you to remember something new, add one final line of your reply that says exactly [volt-remember: <one short fact>] and put nothing after it. Never write that marker for anything else, and never show it to the user in normal conversation.`;
   p += `\n\nNever mention the knowledge base, uploaded documents, document names or versions (such as "Document A" or "Document B"), or where information came from. Present facts as your own knowledge, naturally.`;
+  if (prefs.shakespeare === true) {
+    p += `\n\nLanguage style: Reply in Shakespearean English. Use early-modern phrasing with thee, thou, thy, dost, hath and similar words, and a poetic, theatrical tone. Keep the content accurate and helpful. Code, commands, file names and links stay exactly as they are, and they are not translated.`;
+  }
   const now = new Date();
   p += `\n\nCurrent date: ${now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} (local time ${now.toLocaleTimeString()}) in the ${Intl.DateTimeFormat().resolvedOptions().timeZone} timezone. Use this for anything time-related instead of guessing.`;
   const prof = prefs.profile || {};
@@ -2291,7 +2311,8 @@ const CLI_HELP = [
   [':skills', 'List skills.'],
   [':skill <name|none>', 'Turn a skill on, or :skill none to turn them all off.'],
   [':thinking on|off', 'Turn reasoning mode on or off.'],
-  [':web on|off', 'Turn web search on or off.'],
+  [':web on|off', 'Web search is always on; this just reports it.'],
+  [':shakespeare on|off', 'Answer in Shakespearean English or plain English.'],
   [':pin [number]', 'Pin the last answer, or a message by number.'],
   [':pins', 'List pinned messages in this chat.'],
   [':unpin <number>', 'Unpin a message from the :pins list.'],
@@ -2386,6 +2407,12 @@ function runCliCommand(raw) {
       if (want === null) return toast('Usage: :thinking on|off');
       if ((prefs.thinking === true) !== want) toggleThinking();
       return toast('Thinking ' + (want ? 'on' : 'off'));
+    }
+    case 'shakespeare': {
+      const want = onOff(arg);
+      if (want === null) return toast('Usage: :shakespeare on|off');
+      prefs.shakespeare = want; persist();
+      return toast('Shakespearean English ' + (want ? 'on' : 'off'));
     }
     case 'web': {
       const want = onOff(arg);
@@ -2887,6 +2914,15 @@ function mdFallback(text) {
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+}
+
+/* ---------- Thunder strike when Volt answers ---------- */
+function thunderStrike() {
+  if (prefs.cli) return;
+  const el = $('thunder');
+  el.classList.remove('on');
+  void el.offsetWidth;
+  el.classList.add('on');
 }
 
 /* ---------- Pinned messages ---------- */
@@ -3393,6 +3429,7 @@ async function runAssistant(assistantMsg) {
       throw new Error('This model returned a safety label instead of a reply, so it is not a chat model. It has been removed from the list. Send your message again.');
     }
     if (!assistantMsg.content) assistantMsg.content = '_No response received. Try another model._';
+    thunderStrike();
     if (prefs.speak) speak(assistantMsg.content);
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -4287,6 +4324,7 @@ function openSettings() {
   $('setSpeak').checked = !!prefs.speak;
   $('setReason').checked = prefs.showReasoning !== false;
   $('setAutoPrev').checked = prefs.autoPreview !== false;
+  $('setShakes').checked = prefs.shakespeare === true;
   renderMemory();
   renderStats();
   fillVoices();
@@ -4303,6 +4341,7 @@ $('setNotes').addEventListener('input', e => { prefs.profile.notes = e.target.va
 $('setSpeak').addEventListener('change', e => { prefs.speak = e.target.checked; els.speakToggle.checked = e.target.checked; persist(); if (!prefs.speak) stopSpeaking(); });
 $('setReason').addEventListener('change', e => { prefs.showReasoning = e.target.checked; reasonToggle.checked = e.target.checked; persist(); renderAll(false); });
 $('setAutoPrev').addEventListener('change', e => { prefs.autoPreview = e.target.checked; persist(); });
+$('setShakes').addEventListener('change', e => { prefs.shakespeare = e.target.checked; persist(); toast(prefs.shakespeare ? 'Volt will answer in Shakespearean English.' : 'Back to plain English.'); });
 $('setVoice').addEventListener('change', e => { prefs.voice = e.target.value; persist(); });
 $('setSearxng').value = prefs.searxng || '';
 $('setSearxng').addEventListener('change', e => { prefs.searxng = e.target.value.trim().replace(/\/+$/, ''); persist(); toast(prefs.searxng ? 'SearXNG saved.' : 'SearXNG cleared.'); });
