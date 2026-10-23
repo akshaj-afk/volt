@@ -1613,6 +1613,11 @@
   @keyframes boltFlash { 0% { opacity: .16; } 12% { opacity: .05; } 25% { opacity: .12; } 100% { opacity: 0; } }
   @keyframes boltFade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
   [data-mode="cli"] .thunder { display: none !important; }
+
+  /* Thunder strike v2 */
+  .thunder.on { display: block; animation: none; }
+  .thunder svg { height: 100%; }
+  .thunder path, .thunder polyline { filter: none; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -2919,10 +2924,84 @@ function greeting() {
 /* ---------- Thunder strike when Volt answers ---------- */
 function thunderStrike() {
   if (prefs.cli) return;
-  const el = $('thunder');
-  el.classList.remove('on');
-  void el.offsetWidth;
-  el.classList.add('on');
+  const wrap = $('thunder');
+  const svg = wrap.querySelector('svg');
+  const flash = wrap.querySelector('.thunder-flash');
+  const w = innerWidth, h = innerHeight;
+  const box = document.querySelector('.composer')?.getBoundingClientRect();
+  const tx = box ? box.left + box.width * (0.3 + Math.random() * 0.4) : w * 0.5;
+  const ty = box ? box.top : h * 0.8;
+  const size = Math.min(w, h);
+
+  /* Random midpoint displacement gives a jagged, natural-looking bolt */
+  const jag = (x1, y1, x2, y2, amp, depth) => {
+    if (depth === 0) return [[x2, y2]];
+    const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * amp;
+    const my = (y1 + y2) / 2 + (Math.random() - 0.5) * amp * 0.25;
+    return [...jag(x1, y1, mx, my, amp * 0.58, depth - 1), ...jag(mx, my, x2, y2, amp * 0.58, depth - 1)];
+  };
+  const start = [tx + (Math.random() - 0.5) * w * 0.22, -20];
+  const trunk = [start, ...jag(start[0], start[1], tx, ty, size * 0.11, 7)];
+  const branches = [0, 1].map(() => {
+    const k = Math.floor(trunk.length * (0.25 + Math.random() * 0.4));
+    const [bx, by] = trunk[k];
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    return [[bx, by], ...jag(bx, by, bx + dir * w * (0.08 + Math.random() * 0.1), by + h * (0.1 + Math.random() * 0.12), size * 0.05, 4)];
+  });
+
+  /* Build the SVG at window size */
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = '';
+  const NS = 'http://www.w3.org/2000/svg';
+  const group = document.createElementNS(NS, 'g');
+  svg.appendChild(group);
+  const layers = [
+    { width: 12, color: 'var(--accent)', opacity: .32, blur: true },
+    { width: 4.5, color: 'var(--accent)', opacity: .9 },
+    { width: 1.6, color: '#ffffff', opacity: 1 }
+  ];
+  const draw = (pts, delay, widthScale = 1) => {
+    const animated = [];
+    layers.forEach(layer => {
+      const pl = document.createElementNS(NS, 'polyline');
+      pl.setAttribute('points', pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
+      pl.setAttribute('fill', 'none');
+      pl.setAttribute('stroke', layer.color);
+      pl.setAttribute('stroke-width', layer.width * widthScale);
+      pl.setAttribute('stroke-linejoin', 'round');
+      pl.setAttribute('stroke-linecap', 'round');
+      pl.setAttribute('opacity', layer.opacity);
+      if (layer.blur) pl.style.filter = 'blur(3px)';
+      group.appendChild(pl);
+      animated.push(pl);
+    });
+    animated.forEach(el => {
+      const L = el.getTotalLength();
+      el.animate([{ strokeDasharray: `${L} ${L}`, strokeDashoffset: L }, { strokeDasharray: `${L} ${L}`, strokeDashoffset: 0 }],
+        { duration: 110, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+    });
+  };
+  draw(trunk, 0);
+  branches.forEach((b, i) => draw(b, 70 + i * 35, 0.6));
+
+  /* Impact ring where the bolt meets the chat box */
+  const ring = document.createElementNS(NS, 'circle');
+  ring.setAttribute('cx', tx); ring.setAttribute('cy', ty); ring.setAttribute('r', 4);
+  ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', 'var(--accent)'); ring.setAttribute('stroke-width', 2);
+  group.appendChild(ring);
+  ring.animate([{ r: 4, opacity: 1 }, { r: 60, opacity: 0 }], { duration: 520, delay: 110, easing: 'ease-out', fill: 'forwards' });
+
+  /* Restart the whole effect: the bolt flickers out, the screen flashes once */
+  wrap.classList.remove('on');
+  void wrap.offsetWidth;
+  wrap.classList.add('on');
+  group.animate([
+    { opacity: 1, offset: 0 }, { opacity: .35, offset: .18 }, { opacity: .95, offset: .26 },
+    { opacity: .45, offset: .4 }, { opacity: .8, offset: .48 }, { opacity: 0, offset: 1 }
+  ], { duration: 900, fill: 'forwards' });
+  flash.animate([{ opacity: 0 }, { opacity: .22, offset: .03 }, { opacity: .06, offset: .12 }, { opacity: .14, offset: .2 }, { opacity: 0 }],
+    { duration: 650 });
 }
 
 /* ---------- Pinned messages ---------- */
