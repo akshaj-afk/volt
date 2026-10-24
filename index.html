@@ -1829,6 +1829,9 @@
       <div class="set-row"><span>Creativity<span class="sub">Low is focused, high is exploratory</span></span>
         <span style="display:inline-flex;align-items:center;gap:10px"><input type="range" id="setTemp" min="0" max="1.5" step="0.1" /><b class="set-num" id="tempVal">1.0</b></span>
       </div>
+      <div class="set-row"><span>Thunder sound<span class="sub">Plays a thunder crack when Volt answers</span></span>
+        <span class="switch"><input type="checkbox" id="setThunder" /><span class="slider"></span></span>
+      </div>
       <div class="set-row"><span>Shakespearean English<span class="sub">Volt answers in the style of Shakespeare</span></span>
         <span class="switch"><input type="checkbox" id="setShakes" /><span class="slider"></span></span>
       </div>
@@ -2926,6 +2929,68 @@ function greeting() {
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
+/* ---------- Thunder sound (synthesised with Web Audio, no files needed) ---------- */
+let thunderCtx = null;
+let thunderNoise = null;
+function playThunder() {
+  if (prefs.thunderSound === false) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try {
+    if (!thunderCtx) thunderCtx = new AC();
+    if (thunderCtx.state === 'suspended') thunderCtx.resume();
+    const ctx = thunderCtx;
+    if (!thunderNoise) {
+      const len = ctx.sampleRate * 4;
+      thunderNoise = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = thunderNoise.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const t0 = ctx.currentTime + 0.04;
+    const master = ctx.createGain();
+    master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    master.connect(comp); comp.connect(ctx.destination);
+
+    /* The crack: a short, bright burst right at the strike */
+    const crack = ctx.createBufferSource();
+    crack.buffer = thunderNoise;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0.0001, t0);
+    cg.gain.exponentialRampToValueAtTime(1.0, t0 + 0.004);
+    cg.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.35);
+    crack.connect(hp); hp.connect(cg); cg.connect(master);
+    crack.start(t0, Math.random() * 2);
+    crack.stop(t0 + 0.4);
+
+    /* The rumble: a deep roll that swells, then fades out over a few seconds */
+    const roll = ctx.createBufferSource();
+    roll.buffer = thunderNoise;
+    roll.playbackRate.value = 0.8;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260; lp.Q.value = 0.8;
+    const rg = ctx.createGain();
+    rg.gain.setValueAtTime(0.0001, t0 + 0.05);
+    rg.gain.exponentialRampToValueAtTime(0.85, t0 + 0.35);
+    rg.gain.setValueAtTime(0.7, t0 + 0.9);
+    rg.gain.exponentialRampToValueAtTime(0.0008, t0 + 3.4);
+    roll.connect(lp); lp.connect(rg); rg.connect(master);
+    roll.start(t0 + 0.05, Math.random() * 2);
+    roll.stop(t0 + 3.5);
+
+    /* A low thump under the rumble */
+    const osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(70, t0);
+    osc.frequency.exponentialRampToValueAtTime(34, t0 + 1.4);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t0);
+    og.gain.exponentialRampToValueAtTime(0.55, t0 + 0.06);
+    og.gain.exponentialRampToValueAtTime(0.0008, t0 + 1.8);
+    osc.connect(og); og.connect(master);
+    osc.start(t0); osc.stop(t0 + 1.9);
+  } catch { /* audio is optional */ }
+}
+
 /* ---------- Thunder strike when Volt answers ---------- */
 function thunderStrike() {
   if (prefs.cli) return;
@@ -3007,6 +3072,7 @@ function thunderStrike() {
   ], { duration: 900, fill: 'forwards' });
   flash.animate([{ opacity: 0 }, { opacity: .22, offset: .03 }, { opacity: .06, offset: .12 }, { opacity: .14, offset: .2 }, { opacity: 0 }],
     { duration: 650 });
+  playThunder();
 }
 
 /* ---------- Pinned messages ---------- */
@@ -4409,6 +4475,7 @@ function openSettings() {
   $('setReason').checked = prefs.showReasoning !== false;
   $('setAutoPrev').checked = prefs.autoPreview !== false;
   $('setShakes').checked = prefs.shakespeare === true;
+  $('setThunder').checked = prefs.thunderSound !== false;
   renderMemory();
   renderStats();
   fillVoices();
@@ -4425,6 +4492,7 @@ $('setNotes').addEventListener('input', e => { prefs.profile.notes = e.target.va
 $('setSpeak').addEventListener('change', e => { prefs.speak = e.target.checked; els.speakToggle.checked = e.target.checked; persist(); if (!prefs.speak) stopSpeaking(); });
 $('setReason').addEventListener('change', e => { prefs.showReasoning = e.target.checked; reasonToggle.checked = e.target.checked; persist(); renderAll(false); });
 $('setAutoPrev').addEventListener('change', e => { prefs.autoPreview = e.target.checked; persist(); });
+$('setThunder').addEventListener('change', e => { prefs.thunderSound = e.target.checked; persist(); if (e.target.checked) playThunder(); });
 $('setShakes').addEventListener('change', e => { prefs.shakespeare = e.target.checked; persist(); toast(prefs.shakespeare ? 'Volt will answer in Shakespearean English.' : 'Back to plain English.'); });
 $('setVoice').addEventListener('change', e => { prefs.voice = e.target.value; persist(); });
 $('setSearxng').value = prefs.searxng || '';
