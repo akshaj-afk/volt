@@ -2931,7 +2931,8 @@ function greeting() {
 
 /* ---------- Thunder sound (synthesised with Web Audio, no files needed) ---------- */
 let thunderCtx = null;
-let thunderNoise = null;
+let thunderWhite = null;
+let thunderBrown = null;
 function playThunder() {
   if (prefs.thunderSound === false) return;
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -2940,54 +2941,60 @@ function playThunder() {
     if (!thunderCtx) thunderCtx = new AC();
     if (thunderCtx.state === 'suspended') thunderCtx.resume();
     const ctx = thunderCtx;
-    if (!thunderNoise) {
-      const len = ctx.sampleRate * 4;
-      thunderNoise = ctx.createBuffer(1, len, ctx.sampleRate);
-      const d = thunderNoise.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const rate = ctx.sampleRate;
+    if (!thunderWhite) {
+      /* Plain noise for the crack */
+      thunderWhite = ctx.createBuffer(1, rate * 2, rate);
+      const d = thunderWhite.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
-    const t0 = ctx.currentTime + 0.04;
+    if (!thunderBrown) {
+      /* Brown noise (low, rumbling noise) for the roll */
+      thunderBrown = ctx.createBuffer(1, rate * 6, rate);
+      const d = thunderBrown.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < d.length; i++) {
+        last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+        d[i] = last * 3.5;
+      }
+    }
+    const t0 = ctx.currentTime + 0.03;
     const master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = 0.75;
     const comp = ctx.createDynamicsCompressor();
     master.connect(comp); comp.connect(ctx.destination);
 
-    /* The crack: a short, bright burst right at the strike */
-    const crack = ctx.createBufferSource();
-    crack.buffer = thunderNoise;
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
-    const cg = ctx.createGain();
-    cg.gain.setValueAtTime(0.0001, t0);
-    cg.gain.exponentialRampToValueAtTime(1.0, t0 + 0.004);
-    cg.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.35);
-    crack.connect(hp); hp.connect(cg); cg.connect(master);
-    crack.start(t0, Math.random() * 2);
-    crack.stop(t0 + 0.4);
+    /* 1. The crack: two sharp snaps right at the strike, then gone */
+    [[0, 0.55], [0.06, 0.3]].forEach(([off, peak]) => {
+      const src = ctx.createBufferSource();
+      src.buffer = thunderWhite;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 700;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3500;
+      const g = ctx.createGain();
+      const a = t0 + off;
+      g.gain.setValueAtTime(0.0001, a);
+      g.gain.exponentialRampToValueAtTime(peak, a + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0005, a + 0.2);
+      src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(master);
+      src.start(a, Math.random());
+      src.stop(a + 0.25);
+    });
 
-    /* The rumble: a deep roll that swells, then fades out over a few seconds */
-    const roll = ctx.createBufferSource();
-    roll.buffer = thunderNoise;
-    roll.playbackRate.value = 0.8;
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260; lp.Q.value = 0.8;
-    const rg = ctx.createGain();
-    rg.gain.setValueAtTime(0.0001, t0 + 0.05);
-    rg.gain.exponentialRampToValueAtTime(0.85, t0 + 0.35);
-    rg.gain.setValueAtTime(0.7, t0 + 0.9);
-    rg.gain.exponentialRampToValueAtTime(0.0008, t0 + 3.4);
-    roll.connect(lp); lp.connect(rg); rg.connect(master);
-    roll.start(t0 + 0.05, Math.random() * 2);
-    roll.stop(t0 + 3.5);
-
-    /* A low thump under the rumble */
-    const osc = ctx.createOscillator(); osc.type = 'sine';
-    osc.frequency.setValueAtTime(70, t0);
-    osc.frequency.exponentialRampToValueAtTime(34, t0 + 1.4);
-    const og = ctx.createGain();
-    og.gain.setValueAtTime(0.0001, t0);
-    og.gain.exponentialRampToValueAtTime(0.55, t0 + 0.06);
-    og.gain.exponentialRampToValueAtTime(0.0008, t0 + 1.8);
-    osc.connect(og); og.connect(master);
-    osc.start(t0); osc.stop(t0 + 1.9);
+    /* 2. The roll: three overlapping low swells of brown noise that fade over a few seconds */
+    [[0.08, 0.7, 3.2], [0.45, 0.6, 3.0], [0.95, 0.45, 2.6]].forEach(([off, peak, len]) => {
+      const src = ctx.createBufferSource();
+      src.buffer = thunderBrown;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 140; lp.Q.value = 0.5;
+      const g = ctx.createGain();
+      const a = t0 + off;
+      g.gain.setValueAtTime(0.0001, a);
+      g.gain.exponentialRampToValueAtTime(peak, a + 0.35);
+      g.gain.exponentialRampToValueAtTime(peak * 0.45, a + 0.35 + len * 0.35);
+      g.gain.exponentialRampToValueAtTime(0.0005, a + len);
+      src.connect(lp); lp.connect(g); g.connect(master);
+      src.start(a, Math.random() * 3);
+      src.stop(a + len + 0.1);
+    });
   } catch { /* audio is optional */ }
 }
 
