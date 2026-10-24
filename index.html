@@ -2942,13 +2942,11 @@ function playSynthThunder() {
     const ctx = thunderCtx;
     const rate = ctx.sampleRate;
     if (!thunderWhite) {
-      /* Plain noise for the crack */
-      thunderWhite = ctx.createBuffer(1, rate * 2, rate);
+      thunderWhite = ctx.createBuffer(1, rate * 5, rate);
       const d = thunderWhite.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
     if (!thunderBrown) {
-      /* Brown noise (low, rumbling noise) for the roll */
       thunderBrown = ctx.createBuffer(1, rate * 6, rate);
       const d = thunderBrown.getChannelData(0);
       let last = 0;
@@ -2957,66 +2955,70 @@ function playSynthThunder() {
         d[i] = last * 3.5;
       }
     }
+    /* Measured from the reference thunder recording: loudness in dB every 0.1 s over 3.8 s,
+       with a sharp strike, a long roll, and a fade-out. */
+    const DUR = 3.85;
+    const DB = [-19, -14, -14, -12, -8, -13, -9, -10, -10, -15, -15, -17, -13, -15, -23, -24, -25, -27, -25, -24,
+                -25, -26, -23, -24, -28, -29, -30, -32, -26, -30, -27, -31, -32, -33, -31, -41, -49];
+    const lin = db => Math.pow(10, db / 20);
     const t0 = ctx.currentTime + 0.03;
-    const master = ctx.createGain();
-    master.gain.value = 0.75;
-    const comp = ctx.createDynamicsCompressor();
-    master.connect(comp); comp.connect(ctx.destination);
 
-    /* 1. The crack: two sharp snaps right at the strike, then gone */
-    [[0, 0.55], [0.06, 0.3]].forEach(([off, peak]) => {
-      const src = ctx.createBufferSource();
-      src.buffer = thunderWhite;
-      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 700;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3500;
-      const g = ctx.createGain();
-      const a = t0 + off;
-      g.gain.setValueAtTime(0.0001, a);
-      g.gain.exponentialRampToValueAtTime(peak, a + 0.003);
-      g.gain.exponentialRampToValueAtTime(0.0005, a + 0.2);
-      src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(master);
-      src.start(a, Math.random());
-      src.stop(a + 0.25);
-    });
+    /* Loudness contour that shapes the roll and the body */
+    const contour = g => {
+      g.gain.setValueAtTime(lin(DB[0]), t0);
+      DB.forEach((db, k) => g.gain.linearRampToValueAtTime(lin(db), t0 + 0.05 + k * 0.1));
+      g.gain.linearRampToValueAtTime(0.0001, t0 + DUR);
+      return g;
+    };
 
-    /* 2. The roll: three overlapping low swells of brown noise that fade over a few seconds */
-    [[0.08, 0.7, 3.2], [0.45, 0.6, 3.0], [0.95, 0.45, 2.6]].forEach(([off, peak, len]) => {
-      const src = ctx.createBufferSource();
-      src.buffer = thunderBrown;
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 140; lp.Q.value = 0.5;
-      const g = ctx.createGain();
-      const a = t0 + off;
-      g.gain.setValueAtTime(0.0001, a);
-      g.gain.exponentialRampToValueAtTime(peak, a + 0.35);
-      g.gain.exponentialRampToValueAtTime(peak * 0.45, a + 0.35 + len * 0.35);
-      g.gain.exponentialRampToValueAtTime(0.0005, a + len);
-      src.connect(lp); lp.connect(g); g.connect(master);
-      src.start(a, Math.random() * 3);
-      src.stop(a + len + 0.1);
-    });
+    /* Low rolling rumble (brown noise, low-passed) */
+    const rumbleSrc = ctx.createBufferSource();
+    rumbleSrc.buffer = thunderBrown;
+    const rumbleLP = ctx.createBiquadFilter(); rumbleLP.type = 'lowpass'; rumbleLP.frequency.value = 900; rumbleLP.Q.value = 0.707;
+    const rumbleGain = contour(ctx.createGain());
+    rumbleSrc.connect(rumbleLP); rumbleLP.connect(rumbleGain);
+
+    /* Mid-range body of the roll */
+    const bodySrc = ctx.createBufferSource();
+    bodySrc.buffer = thunderWhite;
+    const bodyBP = ctx.createBiquadFilter(); bodyBP.type = 'bandpass'; bodyBP.frequency.value = 329; bodyBP.Q.value = 0.42;
+    const bodyGain = contour(ctx.createGain());
+    const bodyLevel = ctx.createGain(); bodyLevel.gain.value = 0.5;
+    bodySrc.connect(bodyBP); bodyBP.connect(bodyLevel); bodyLevel.connect(bodyGain);
+
+    /* The crack at the strike: bright noise that dies away in about half a second */
+    const crackSrc = ctx.createBufferSource();
+    crackSrc.buffer = thunderWhite;
+    const crackBP = ctx.createBiquadFilter(); crackBP.type = 'bandpass'; crackBP.frequency.value = 1414; crackBP.Q.value = 0.4;
+    const crackGain = ctx.createGain();
+    crackGain.gain.setValueAtTime(0.75, t0);
+    crackGain.gain.exponentialRampToValueAtTime(0.75 * Math.exp(-4), t0 + 0.48);
+    crackSrc.connect(crackBP); crackBP.connect(crackGain);
+
+    /* Mix, gently saturate so the level sits like the reference, then play */
+    const mix = ctx.createGain();
+    rumbleGain.connect(mix); bodyGain.connect(mix); crackGain.connect(mix);
+    const preGain = ctx.createGain(); preGain.gain.value = 1 / 0.635;
+    const shaper = ctx.createWaveShaper();
+    const curve = new Float32Array(2048);
+    for (let i = 0; i < curve.length; i++) {
+      const x = (i / (curve.length - 1)) * 2 - 1;
+      curve[i] = Math.tanh(3 * x) / Math.tanh(3);
+    }
+    shaper.curve = curve;
+    const out = ctx.createGain(); out.gain.value = 0.92;
+    mix.connect(preGain); preGain.connect(shaper); shaper.connect(out); out.connect(ctx.destination);
+
+    rumbleSrc.start(t0, Math.random() * 3); rumbleSrc.stop(t0 + DUR + 0.1);
+    bodySrc.start(t0, Math.random() * 2); bodySrc.stop(t0 + DUR + 0.1);
+    crackSrc.start(t0, Math.random()); crackSrc.stop(t0 + 0.5);
   } catch { /* audio is optional */ }
 }
 
-/* Plays thunder.mp3 from the same folder as this page. If the file is missing or can't play, the synthesised sound is used. */
-let thunderAudio = null;
-let thunderFileBroken = false;
+/* The thunder sound is synthesised in the browser and matched to the reference recording. */
 function playThunder() {
   if (prefs.thunderSound === false) return;
-  if (thunderFileBroken) return playSynthThunder();
-  try {
-    if (!thunderAudio) {
-      thunderAudio = new Audio('thunder.mp3');
-      thunderAudio.preload = 'auto';
-      thunderAudio.volume = 0.9;
-      thunderAudio.addEventListener('error', () => { thunderFileBroken = true; });
-    }
-    thunderAudio.currentTime = 0;
-    const p = thunderAudio.play();
-    if (p && p.catch) p.catch(() => playSynthThunder()); /* e.g. blocked until the first click: use the synth sound for this strike only */
-  } catch {
-    thunderFileBroken = true;
-    playSynthThunder();
-  }
+  playSynthThunder();
 }
 
 /* ---------- Thunder strike when Volt answers ---------- */
