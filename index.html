@@ -2933,8 +2933,7 @@ function greeting() {
 let thunderCtx = null;
 let thunderWhite = null;
 let thunderBrown = null;
-function playThunder() {
-  if (prefs.thunderSound === false) return;
+function playSynthThunder() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
   try {
@@ -2996,6 +2995,28 @@ function playThunder() {
       src.stop(a + len + 0.1);
     });
   } catch { /* audio is optional */ }
+}
+
+/* Plays thunder.mp3 from the same folder as this page. If the file is missing or can't play, the synthesised sound is used. */
+let thunderAudio = null;
+let thunderFileBroken = false;
+function playThunder() {
+  if (prefs.thunderSound === false) return;
+  if (thunderFileBroken) return playSynthThunder();
+  try {
+    if (!thunderAudio) {
+      thunderAudio = new Audio('thunder.mp3');
+      thunderAudio.preload = 'auto';
+      thunderAudio.volume = 0.9;
+      thunderAudio.addEventListener('error', () => { thunderFileBroken = true; });
+    }
+    thunderAudio.currentTime = 0;
+    const p = thunderAudio.play();
+    if (p && p.catch) p.catch(() => playSynthThunder()); /* e.g. blocked until the first click: use the synth sound for this strike only */
+  } catch {
+    thunderFileBroken = true;
+    playSynthThunder();
+  }
 }
 
 /* ---------- Thunder strike when Volt answers ---------- */
