@@ -1829,6 +1829,9 @@
       <div class="set-row"><span>Creativity<span class="sub">Low is focused, high is exploratory</span></span>
         <span style="display:inline-flex;align-items:center;gap:10px"><input type="range" id="setTemp" min="0" max="1.5" step="0.1" /><b class="set-num" id="tempVal">1.0</b></span>
       </div>
+      <div class="set-row"><span>Code mode<span class="sub">Qwen models and a coding focus</span></span>
+        <span class="switch"><input type="checkbox" id="setCode" /><span class="slider"></span></span>
+      </div>
       <div class="set-row"><span>Thunder sound<span class="sub">Plays a thunder crack when Volt answers</span></span>
         <span class="switch"><input type="checkbox" id="setThunder" /><span class="slider"></span></span>
       </div>
@@ -2014,6 +2017,9 @@ function buildSystemPrompt() {
   p += `\n\nInterfaces: Whenever the user asks for an app, interface, UI, mock-up, form, dashboard, page, animation, calculator, tool or game, build it as one complete self-contained HTML file (inline CSS and JS, no external assets unless the user asks) in a fenced \`\`\`html page-name.html block. The app previews it live inside the chat window and lets the user download it, so the interface must work immediately. Keep it working on the first try: no placeholders, no TODOs. Quizzes, polls, games, calculators and other small interactive pieces belong right in the chat, so make them an html block; they appear inline in the conversation. Never tell the user to open a file to use them.`;
   p += `\n\nMemory: You also have a short list of remembered facts below. When the user explicitly asks you to remember something new, add one final line of your reply that says exactly [volt-remember: <one short fact>] and put nothing after it. Never write that marker for anything else, and never show it to the user in normal conversation.`;
   p += `\n\nNever mention the knowledge base, uploaded documents, document names or versions (such as "Document A" or "Document B"), or where information came from. Present facts as your own knowledge, naturally.`;
+  if (prefs.codeMode) {
+    p += `\n\nCode mode is ON. Act as an expert software engineer. Write complete, correct, runnable code with no placeholders. Put every file in its own fenced block with a real filename. Keep prose short: say what the code does, how to run it, and any important edge cases.`;
+  }
   if (prefs.shakespeare === true) {
     p += `\n\nLanguage style: Reply in Shakespearean English. Use early-modern phrasing with thee, thou, thy, dost, hath and similar words, and a poetic, theatrical tone. Keep the content accurate and helpful. Code, commands, file names and links stay exactly as they are, and they are not translated.`;
   }
@@ -2080,13 +2086,87 @@ function dropBlockedModels() {
   for (let i = MODELS.length - 1; i >= 1; i--) if (isBlockedModel(MODELS[i].id)) MODELS.splice(i, 1);
 }
 
+/* ---------- Qwen through Puter.js (no API key; users cover their own usage via Puter) ---------- */
+const PUTER_MODELS = {
+  'puter:qwen/qwen3.6-max-preview': 'qwen/qwen3.6-max-preview',
+  'puter:qwen/qwen3.6-plus': 'qwen/qwen3.6-plus',
+  'puter:qwen/qwen3.6-flash': 'qwen/qwen3.6-flash'
+};
+let puterLoading = null;
+let puterNoticeShown = false;
+function loadPuter() {
+  if (window.puter?.ai) return Promise.resolve();
+  if (!puterLoading) {
+    puterLoading = new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://js.puter.com/v2/';
+      sc.onload = () => resolve();
+      sc.onerror = () => { puterLoading = null; reject(new Error('Could not load Puter.js. Check your internet connection.')); };
+      document.head.appendChild(sc);
+    });
+  }
+  return puterLoading;
+}
+/* Turns Puter's answer into the server-sent-events format the chat already reads */
+function puterSSEResponse(model, messages, signal) {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = text => { if (text) controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)); };
+      try {
+        await loadPuter();
+        if (!puterNoticeShown) { puterNoticeShown = true; toast('Puter may ask you to sign in. Usage is covered by your Puter account.'); }
+        const response = await window.puter.ai.chat(messages, { model, stream: true });
+        if (typeof response === 'string') send(response);
+        else if (response && typeof response[Symbol.asyncIterator] === 'function') {
+          for await (const part of response) {
+            if (signal.aborted) break;
+            send(typeof part === 'string' ? part : (part?.text ?? part?.content ?? ''));
+          }
+        } else {
+          send(response?.message?.content ?? response?.text ?? '');
+        }
+        controller.enqueue(enc.encode('data: [DONE]\n\n'));
+      } catch (err) {
+        controller.enqueue(enc.encode(`data: ${JSON.stringify({ error: { message: 'Puter error: ' + (err?.message || err) } })}\n\n`));
+      }
+      controller.close();
+    }
+  });
+  return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+}
+
+/* Qwen models for coding. They are only listed while Code mode is on. */
+const QWEN_CODE_MODELS = [
+  { group: 'Qwen (code mode)', id: 'qwen/qwen3-coder:free', name: 'Qwen3 Coder 480B (Free)' },
+  { group: 'Qwen (code mode)', id: 'qwen/qwen3-next-80b-a3b-instruct:free', name: 'Qwen3 Next 80B (Free)' },
+  { group: 'Qwen (Puter)', id: 'puter:qwen/qwen3.6-max-preview', name: 'Qwen3.6 Max Preview (Puter)' },
+  { group: 'Qwen (Puter)', id: 'puter:qwen/qwen3.6-plus', name: 'Qwen3.6 Plus (Puter)' },
+  { group: 'Qwen (Puter)', id: 'puter:qwen/qwen3.6-flash', name: 'Qwen3.6 Flash (Puter)' }
+];
+const QWEN_IDS = QWEN_CODE_MODELS.map(m => m.id);
+function syncCodeModels() {
+  for (let i = MODELS.length - 1; i >= 0; i--) if (QWEN_IDS.includes(MODELS[i].id)) MODELS.splice(i, 1);
+  if (prefs.codeMode) MODELS.push(...QWEN_CODE_MODELS);
+  if (!prefs.codeMode && QWEN_IDS.includes(prefs.model)) { prefs.model = AUTO_MODEL.id; persist(); }
+  buildModelSelect();
+}
+function setCodeMode(on) {
+  prefs.codeMode = !!on;
+  if (prefs.codeMode && (!prefs.model || prefs.model === AUTO_MODEL.id)) prefs.model = QWEN_CODE_MODELS[0].id;
+  persist();
+  syncCodeModels();
+  renderStatePills();
+  toast(prefs.codeMode ? 'Code mode on: Qwen models and a coding focus.' : 'Code mode off.');
+}
+
 async function loadFreeModels() {
   try {
     const r = await fetch('https://openrouter.ai/api/v1/models');
     if (!r.ok) throw new Error('catalogue unavailable');
     const { data } = await r.json();
     const free = data
-      .filter(m => m.id.endsWith(':free') && !isBlockedModel(m.id))
+      .filter(m => m.id.endsWith(':free') && !isBlockedModel(m.id) && !QWEN_IDS.includes(m.id))
       .map(m => ({ group: groupForModel(m), id: m.id, name: (m.name || m.id).replace(/^[^:]*:\s*/, '') }))
       .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
     if (free.length) {
@@ -2097,6 +2177,7 @@ async function loadFreeModels() {
 
   // Drop a saved model that is no longer free or listed
   if (isBlockedModel(prefs.model)) prefs.model = AUTO_MODEL.id;
+  syncCodeModels();
   if (prefs.model && !MODELS.some(m => m.id === prefs.model) && prefs.model !== prefs.customId) {
     prefs.model = AUTO_MODEL.id;
     persist();
@@ -2326,6 +2407,7 @@ const CLI_HELP = [
   [':thinking on|off', 'Turn reasoning mode on or off.'],
   [':web on|off', 'Web search is always on; this just reports it.'],
   [':shakespeare on|off', 'Answer in Shakespearean English or plain English.'],
+  [':code on|off', 'Code mode: Qwen coding models and a coding focus.'],
   [':pin [number]', 'Pin the last answer, or a message by number.'],
   [':pins', 'List pinned messages in this chat.'],
   [':unpin <number>', 'Unpin a message from the :pins list.'],
@@ -2420,6 +2502,11 @@ function runCliCommand(raw) {
       if (want === null) return toast('Usage: :thinking on|off');
       if ((prefs.thinking === true) !== want) toggleThinking();
       return toast('Thinking ' + (want ? 'on' : 'off'));
+    }
+    case 'code': {
+      const want = onOff(arg);
+      if (want === null) return toast('Usage: :code on|off');
+      return setCodeMode(want);
     }
     case 'shakespeare': {
       const want = onOff(arg);
@@ -3517,18 +3604,22 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const webNote = prefs.web ? webPromptFor(await webContext(lastUser?.shown ?? lastUser?.content ?? '')) : '';
 
   // Calls our own serverless route, which adds the secret key on the server.
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: useModel,
-      stream: true,
-      reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
-      ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
-      messages: [{ role: 'system', content: buildSystemPrompt() + webNote }, ...payloadMessages]
-    }),
-    signal: ctrl.signal
-  });
+  // Puter-hosted Qwen models are called from the page through Puter.js.
+  const reqMessages = [{ role: 'system', content: buildSystemPrompt() + webNote }, ...payloadMessages];
+  const res = PUTER_MODELS[useModel]
+    ? puterSSEResponse(PUTER_MODELS[useModel], reqMessages, ctrl.signal)
+    : await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: useModel,
+          stream: true,
+          reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
+          ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
+          messages: reqMessages
+        }),
+        signal: ctrl.signal
+      });
 
   if (!res.ok) {
     let msg = `Request failed (HTTP ${res.status})`;
@@ -3974,6 +4065,7 @@ function renderStatePills() {
   }
   if (prefs.web) {
     pills.push('<span class="pill">Web search</span>');
+    if (prefs.codeMode) pills.push('<span class="pill">Code mode</span>');
   }
   $('statePills').innerHTML = pills.join('');
 }
@@ -4506,6 +4598,7 @@ function openSettings() {
   $('setAutoPrev').checked = prefs.autoPreview !== false;
   $('setShakes').checked = prefs.shakespeare === true;
   $('setThunder').checked = prefs.thunderSound !== false;
+  $('setCode').checked = prefs.codeMode === true;
   renderMemory();
   renderStats();
   fillVoices();
@@ -4522,6 +4615,7 @@ $('setNotes').addEventListener('input', e => { prefs.profile.notes = e.target.va
 $('setSpeak').addEventListener('change', e => { prefs.speak = e.target.checked; els.speakToggle.checked = e.target.checked; persist(); if (!prefs.speak) stopSpeaking(); });
 $('setReason').addEventListener('change', e => { prefs.showReasoning = e.target.checked; reasonToggle.checked = e.target.checked; persist(); renderAll(false); });
 $('setAutoPrev').addEventListener('change', e => { prefs.autoPreview = e.target.checked; persist(); });
+$('setCode').addEventListener('change', e => setCodeMode(e.target.checked));
 $('setThunder').addEventListener('change', e => { prefs.thunderSound = e.target.checked; persist(); if (e.target.checked) playThunder(); });
 $('setShakes').addEventListener('change', e => { prefs.shakespeare = e.target.checked; persist(); toast(prefs.shakespeare ? 'Volt will answer in Shakespearean English.' : 'Back to plain English.'); });
 $('setVoice').addEventListener('change', e => { prefs.voice = e.target.value; persist(); });
