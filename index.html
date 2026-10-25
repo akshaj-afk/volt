@@ -1731,6 +1731,10 @@
                 <span>Thinking</span>
                 <span class="switch"><input type="checkbox" id="thinkToggle" /><span class="slider"></span></span>
               </label>
+              <label class="think-toggle code-toggle" title="Code mode: Qwen coding models and a coding focus">
+                <span>Code</span>
+                <span class="switch"><input type="checkbox" id="codeToggle" /><span class="slider"></span></span>
+              </label>
               <div class="state-pills" id="statePills"></div>
             </div>
             <div class="tools">
@@ -2086,49 +2090,47 @@ function dropBlockedModels() {
   for (let i = MODELS.length - 1; i >= 1; i--) if (isBlockedModel(MODELS[i].id)) MODELS.splice(i, 1);
 }
 
-/* ---------- Qwen through Puter.js (no API key; users cover their own usage via Puter) ---------- */
-const PUTER_MODELS = {
-  'puter:qwen/qwen3.6-max-preview': 'qwen/qwen3.6-max-preview',
-  'puter:qwen/qwen3.6-plus': 'qwen/qwen3.6-plus',
-  'puter:qwen/qwen3.6-flash': 'qwen/qwen3.6-flash'
+/* ---------- Qwen in the browser with WebLLM (MLC). Needs WebGPU. Weights download once and stay cached. ---------- */
+const WEBLLM_MODELS = {
+  'webllm:qwen2.5-coder-1.5b': 'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC',
+  'webllm:qwen2.5-coder-0.5b': 'Qwen2.5-Coder-0.5B-Instruct-q4f16_1-MLC'
 };
-let puterLoading = null;
-let puterNoticeShown = false;
-function loadPuter() {
-  if (window.puter?.ai) return Promise.resolve();
-  if (!puterLoading) {
-    puterLoading = new Promise((resolve, reject) => {
-      const sc = document.createElement('script');
-      sc.src = 'https://js.puter.com/v2/';
-      sc.onload = () => resolve();
-      sc.onerror = () => { puterLoading = null; reject(new Error('Could not load Puter.js. Check your internet connection.')); };
-      document.head.appendChild(sc);
-    });
-  }
-  return puterLoading;
+let webllmLib = null;
+let webllmEngine = null;
+let webllmId = null;
+let webllmNoticeShown = false;
+async function getWebLLMEngine(id) {
+  if (!navigator.gpu) throw new Error('This browser has no WebGPU, which in-browser Qwen needs. Use a recent Chrome or Edge on a computer.');
+  if (webllmEngine && webllmId === id) return webllmEngine;
+  if (!webllmLib) webllmLib = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm');
+  if (!webllmNoticeShown) { webllmNoticeShown = true; toast('Loading the in-browser Qwen model. The first run downloads it and can take a few minutes.'); }
+  webllmEngine = await webllmLib.CreateMLCEngine(WEBLLM_MODELS[id], {
+    initProgressCallback: p => { if (p?.text && /Loading|Fetching/i.test(p.text)) $('statusNote') && ($('statusNote').textContent = p.text); }
+  });
+  webllmId = id;
+  return webllmEngine;
 }
-/* Turns Puter's answer into the server-sent-events format the chat already reads */
-function puterSSEResponse(model, messages, signal) {
+/* Turns WebLLM's streamed answer into the server-sent-events format the chat already reads */
+function webllmSSEResponse(id, messages, signal) {
   const enc = new TextEncoder();
+  const plain = messages.map(m => ({
+    role: m.role,
+    content: Array.isArray(m.content) ? m.content.filter(x => x.type === 'text').map(x => x.text).join('\n') : m.content
+  }));
   const stream = new ReadableStream({
     async start(controller) {
       const send = text => { if (text) controller.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`)); };
+      signal.addEventListener('abort', () => { try { webllmEngine?.interruptGenerate?.(); } catch {} });
       try {
-        await loadPuter();
-        if (!puterNoticeShown) { puterNoticeShown = true; toast('Puter may ask you to sign in. Usage is covered by your Puter account.'); }
-        const response = await window.puter.ai.chat(messages, { model, stream: true });
-        if (typeof response === 'string') send(response);
-        else if (response && typeof response[Symbol.asyncIterator] === 'function') {
-          for await (const part of response) {
-            if (signal.aborted) break;
-            send(typeof part === 'string' ? part : (part?.text ?? part?.content ?? ''));
-          }
-        } else {
-          send(response?.message?.content ?? response?.text ?? '');
+        const engine = await getWebLLMEngine(id);
+        const chunks = await engine.chat.completions.create({ messages: plain, stream: true, max_tokens: 1024 });
+        for await (const chunk of chunks) {
+          if (signal.aborted) break;
+          send(chunk.choices?.[0]?.delta?.content || '');
         }
         controller.enqueue(enc.encode('data: [DONE]\n\n'));
       } catch (err) {
-        controller.enqueue(enc.encode(`data: ${JSON.stringify({ error: { message: 'Puter error: ' + (err?.message || err) } })}\n\n`));
+        controller.enqueue(enc.encode(`data: ${JSON.stringify({ error: { message: 'In-browser Qwen: ' + (err?.message || err) } })}\n\n`));
       }
       controller.close();
     }
@@ -2140,14 +2142,19 @@ function puterSSEResponse(model, messages, signal) {
 const QWEN_CODE_MODELS = [
   { group: 'Qwen (code mode)', id: 'qwen/qwen3-coder:free', name: 'Qwen3 Coder 480B (Free)' },
   { group: 'Qwen (code mode)', id: 'qwen/qwen3-next-80b-a3b-instruct:free', name: 'Qwen3 Next 80B (Free)' },
-  { group: 'Qwen (Puter)', id: 'puter:qwen/qwen3.6-max-preview', name: 'Qwen3.6 Max Preview (Puter)' },
-  { group: 'Qwen (Puter)', id: 'puter:qwen/qwen3.6-plus', name: 'Qwen3.6 Plus (Puter)' },
-  { group: 'Qwen (Puter)', id: 'puter:qwen/qwen3.6-flash', name: 'Qwen3.6 Flash (Puter)' }
+  { group: 'Qwen (in browser)', id: 'webllm:qwen2.5-coder-1.5b', name: 'Qwen2.5 Coder 1.5B (in browser, WebGPU)' },
+  { group: 'Qwen (in browser)', id: 'webllm:qwen2.5-coder-0.5b', name: 'Qwen2.5 Coder 0.5B (in browser, WebGPU)' }
 ];
 const QWEN_IDS = QWEN_CODE_MODELS.map(m => m.id);
+let freeCatalog = [];   /* every free model from OpenRouter, after the blocklist */
+const isCodingModel = m => /coder|code|qwen|codestral|devstral|starcoder|codellama/i.test(m.id + ' ' + m.name);
+function visibleModels() {
+  if (!prefs.codeMode) return freeCatalog;
+  return [...freeCatalog.filter(isCodingModel), ...QWEN_CODE_MODELS];
+}
 function syncCodeModels() {
-  for (let i = MODELS.length - 1; i >= 0; i--) if (QWEN_IDS.includes(MODELS[i].id)) MODELS.splice(i, 1);
-  if (prefs.codeMode) MODELS.push(...QWEN_CODE_MODELS);
+  MODELS.length = 0;
+  MODELS.push(AUTO_MODEL, ...visibleModels());
   if (!prefs.codeMode && QWEN_IDS.includes(prefs.model)) { prefs.model = AUTO_MODEL.id; persist(); }
   buildModelSelect();
 }
@@ -2156,6 +2163,8 @@ function setCodeMode(on) {
   if (prefs.codeMode && (!prefs.model || prefs.model === AUTO_MODEL.id)) prefs.model = QWEN_CODE_MODELS[0].id;
   persist();
   syncCodeModels();
+  $('codeToggle').checked = prefs.codeMode === true;
+  $('setCode').checked = prefs.codeMode === true;
   renderStatePills();
   toast(prefs.codeMode ? 'Code mode on: Qwen models and a coding focus.' : 'Code mode off.');
 }
@@ -2169,10 +2178,7 @@ async function loadFreeModels() {
       .filter(m => m.id.endsWith(':free') && !isBlockedModel(m.id) && !QWEN_IDS.includes(m.id))
       .map(m => ({ group: groupForModel(m), id: m.id, name: (m.name || m.id).replace(/^[^:]*:\s*/, '') }))
       .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
-    if (free.length) {
-      MODELS.length = 0;
-      MODELS.push(AUTO_MODEL, ...free);
-    }
+    if (free.length) freeCatalog = free;
   } catch { /* keep fallback */ }
 
   // Drop a saved model that is no longer free or listed
@@ -2576,6 +2582,12 @@ thinkToggle.parentElement.addEventListener('click', e => {
   prefs.thinking = !prefs.thinking;
   thinkToggle.checked = prefs.thinking;
   persist();
+});
+const codeToggle = $('codeToggle');
+codeToggle.checked = prefs.codeMode === true;
+codeToggle.parentElement.addEventListener('click', e => {
+  e.preventDefault();
+  setCodeMode(!prefs.codeMode);
 });
 
 /* ============================ MARKDOWN (safe) ============================ */
@@ -3604,10 +3616,10 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const webNote = prefs.web ? webPromptFor(await webContext(lastUser?.shown ?? lastUser?.content ?? '')) : '';
 
   // Calls our own serverless route, which adds the secret key on the server.
-  // Puter-hosted Qwen models are called from the page through Puter.js.
+  // In-browser Qwen models run on this computer through WebLLM, with no server call.
   const reqMessages = [{ role: 'system', content: buildSystemPrompt() + webNote }, ...payloadMessages];
-  const res = PUTER_MODELS[useModel]
-    ? puterSSEResponse(PUTER_MODELS[useModel], reqMessages, ctrl.signal)
+  const res = WEBLLM_MODELS[useModel]
+    ? webllmSSEResponse(useModel, reqMessages, ctrl.signal)
     : await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
