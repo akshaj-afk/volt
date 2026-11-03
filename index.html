@@ -29,45 +29,48 @@
 <style>
   :root {
     color-scheme: light;
-    --font-ui: "Hanken Grotesk", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
-    --font-serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
     --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-    --bg: #f8f7ff;
-    --sidebar: #f1effc;
+    --bg: #fafaf9;
+    --sidebar: #f3f3f1;
     --surface: #ffffff;
-    --surface-2: #f5f4fd;
-    --text: #232135;
-    --text-2: #4b4866;
-    --muted: #8b87a8;
-    --border: #e8e5f6;
-    --border-strong: #d5d0ee;
-    --hover: #efeefa;
-    --accent: #6a5cff;
-    --accent-2: #ff7a9c;
-    --accent-3: #ffb457;
-    --accent-hover: #5646e8;
-    --accent-soft: #ece7ff;
-    --danger: #ef4f6d;
-    --code-bg: #f5f4fd;
-    --syn-kw: #7c4dff; --syn-str: #12a565; --syn-num: #e07a1f;
-    --syn-title: #d63b7a; --syn-type: #0f8aa8; --syn-attr: #94631b;
-    --grad: #6a5cff;
-    --grad-hover: #5646e8;
-    --grad-soft: #f1eeff;
-    --shadow-sm: 0 1px 2px rgba(38, 28, 92, .08);
-    --shadow-md: 0 2px 8px -3px rgba(38, 28, 92, .14);
-    --shadow-lg: 0 12px 26px -16px rgba(38, 28, 92, .26);
-    --glow: 0 0 0 3px rgba(106, 92, 255, .2);
-    --radius: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 20px;
+    --surface-2: #f6f6f4;
+    --text: #1c1c20;
+    --text-2: #44444f;
+    --muted: #74747f;
+    --border: #e6e6e2;
+    --border-strong: #d0d0c9;
+    --hover: #ededea;
+    --accent: #4f46e5;
+    --accent-rgb: 79, 70, 229;
+    --accent-2: #0d9488;
+    --accent-3: #d97706;
+    --accent-hover: #4338ca;
+    --accent-soft: #eeeefe;
+    --danger: #dc2626;
+    --danger-rgb: 220, 38, 38;
+    --code-bg: #f5f5f2;
+    --syn-kw: #6d28d9; --syn-str: #15803d; --syn-num: #b45309;
+    --syn-title: #be185d; --syn-type: #0e7490; --syn-attr: #92400e;
+    --syn-str-rgb: 21, 128, 61;
+    --grad: #4f46e5;
+    --grad-hover: #4338ca;
+    --grad-soft: #eeeefe;
+    --shadow-sm: 0 1px 2px rgba(24, 24, 32, .06);
+    --shadow-md: 0 4px 14px -8px rgba(24, 24, 32, .18);
+    --shadow-lg: 0 18px 40px -18px rgba(24, 24, 32, .28);
+    --glow: 0 0 0 3px rgba(79, 70, 229, .16);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
     --pill: 999px;
     --fs: 15px;
     --col-w: 760px;
     --rule: 1px solid var(--border);
     --label: 600 11px/1 var(--font-ui);
-    --spring: cubic-bezier(.34, 1.56, .64, 1);
+    --spring: cubic-bezier(.2, .8, .2, 1);
     --ease: cubic-bezier(.22, .61, .36, 1);
   }
   [data-size="compact"] { --fs: 13px; }
@@ -76,30 +79,20 @@
   [data-width="wide"] { --col-w: 900px; }
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #111024;
-    --sidebar: #0d0c1d;
-    --surface: #1a1834;
-    --surface-2: #221f42;
-    --text: #eeecff;
-    --text-2: #c5c1e6;
-    --muted: #8e88bb;
-    --border: #2c2850;
-    --border-strong: #3d3770;
-    --hover: #26224a;
-    --accent: #9d8dff;
-    --accent-hover: #b5a9ff;
-    --accent-soft: #2a2359;
-    --danger: #ff7a9c;
-    --code-bg: #171531;
-    --syn-kw: #b7a6ff; --syn-str: #7ce6b0; --syn-num: #ffc178;
-    --syn-title: #ff9ecb; --syn-type: #7fe3f5; --syn-attr: #ffe08a;
-    --grad: #6a5cff;
-    --grad-hover: #5b4cf0;
-    --grad-soft: #241f4d;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .45);
-    --shadow-md: 0 2px 10px -4px rgba(0, 0, 0, .6);
-    --shadow-lg: 0 14px 30px -18px rgba(0, 0, 0, .75);
-    --glow: 0 0 0 3px rgba(157, 141, 255, .25);
+    --bg: #0f0f11; --sidebar: #131316; --surface: #18181c; --surface-2: #1e1e23;
+    --text: #ededf1; --text-2: #c4c4cc; --muted: #8b8b97;
+    --border: #2a2a31; --border-strong: #3a3a44; --hover: #22222a;
+    --accent: #818cf8; --accent-rgb: 129, 140, 248; --accent-hover: #a5b4fc; --accent-soft: #232347;
+    --danger: #f87171; --danger-rgb: 248, 113, 113;
+    --code-bg: #141418;
+    --syn-kw: #c4b5fd; --syn-str: #86efac; --syn-num: #fcd34d;
+    --syn-title: #f9a8d4; --syn-type: #67e8f9; --syn-attr: #fde68a;
+    --syn-str-rgb: 134, 239, 172;
+    --grad: #4f46e5; --grad-hover: #4338ca; --grad-soft: #232347;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 4px 14px -8px rgba(0, 0, 0, .6);
+    --shadow-lg: 0 18px 40px -18px rgba(0, 0, 0, .75);
+    --glow: 0 0 0 3px rgba(129, 140, 248, .25);
   }
 
   * { box-sizing: border-box; }
@@ -206,7 +199,7 @@
     font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--accent);
     background: var(--accent-soft); border-radius: var(--pill); padding: 1px 6px; font-variant-numeric: tabular-nums;
   }
-  .side-tab.on .tab-count { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+  .side-tab.on .tab-count { background: rgba(var(--accent-rgb), 0.16); }
   .files-note { font-size: 12px; color: var(--muted); padding: 10px 10px 6px; line-height: 1.5; }
   .frow {
     display: flex; align-items: center; gap: 10px; padding: 8px 9px; cursor: pointer;
@@ -286,7 +279,7 @@
   }
   .suggest button:hover {
     color: var(--text); background: var(--hover);
-    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    border-color: rgba(var(--accent-rgb), 0.35);
   }
 
   /* ---------- Messages: rounded bubbles ---------- */
@@ -330,7 +323,7 @@
     background: var(--surface); border: var(--rule); border-radius: var(--pill); padding: 3px 10px;
     font-size: 11.5px; font-weight: 600; color: var(--text-2); font-family: var(--font-ui);
   }
-  .code-head button:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  .code-head button:hover { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.4); }
   .code-btns { display: flex; gap: 5px; }
   .code pre { margin: 0; padding: 13px 14px; overflow-x: auto; }
   .code code { background: none; border: 0; padding: 0; font-size: 12.8px; line-height: 1.62; font-family: var(--font-mono); }
@@ -358,8 +351,8 @@
   .actions button {
     background: var(--surface); border: var(--rule); color: var(--muted); padding: 6px; border-radius: var(--pill); line-height: 0;
   }
-  .actions button:hover { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
-  .actions button.on, .actions button.voted { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .actions button:hover { background: var(--accent-soft); color: var(--accent); border-color: rgba(var(--accent-rgb), 0.35); }
+  .actions button.on, .actions button.voted { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.45); }
   .actions button.voted svg { fill: var(--accent-soft); }
   .actions svg, .circle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -369,7 +362,7 @@
     background: var(--surface); border: var(--rule); border-radius: var(--pill); padding: 4px 11px;
     font-size: 12px; color: var(--muted); font-family: var(--font-mono); box-shadow: var(--shadow-sm);
   }
-  .alt-tab:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); color: var(--accent); }
+  .alt-tab:hover { border-color: rgba(var(--accent-rgb), 0.4); color: var(--accent); }
   .alt-tab.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 700; }
   .alt-tab.use { border-style: dashed; color: var(--muted); font-family: var(--font-ui); }
   .alt-tab.use[disabled] { opacity: .5; }
@@ -448,7 +441,7 @@
     color: var(--text-2); font-size: 12.5px; font-weight: 600; padding: 6px 28px 6px 12px; border-radius: var(--pill);
     outline: none; max-width: 260px; cursor: pointer; box-shadow: var(--shadow-sm);
   }
-  .model-select:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); color: var(--accent); }
+  .model-select:hover { border-color: rgba(var(--accent-rgb), 0.4); color: var(--accent); }
   .model-select option, .model-select optgroup { background: var(--surface); color: var(--text); }
   .tools { display: flex; align-items: center; gap: 6px; }
   .circle {
@@ -468,7 +461,7 @@
   .left-tools { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
   .tools-menu { position: relative; }
   .plus-btn { border: var(--rule); background: var(--surface-2); width: auto; padding: 0 9px; box-shadow: var(--shadow-sm); }
-  .plus-btn:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  .plus-btn:hover { border-color: rgba(var(--accent-rgb), 0.4); }
   .plus-btn.open { background: var(--accent-soft); color: var(--accent); }
   .popover {
     position: absolute; bottom: calc(100% + 12px); left: 0; width: 292px; z-index: 40;
@@ -494,7 +487,7 @@
   .pill {
     display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
     padding: 4px 5px 4px 11px; border-radius: var(--pill); background: var(--accent-soft);
-    color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent); border: 1px solid rgba(var(--accent-rgb), 0.22);
     box-shadow: var(--shadow-sm);
   }
   .pill button { background: rgba(255, 255, 255, .6); border: 0; color: inherit; line-height: 0; padding: 3px; border-radius: 50%; opacity: .75; }
@@ -509,7 +502,7 @@
   }
   .file-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .file-chip button { background: none; border: 0; color: var(--muted); line-height: 0; padding: 3px; border-radius: 50%; }
-  .file-chip button:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+  .file-chip button:hover { color: var(--danger); background: rgba(var(--danger-rgb), 0.14); }
   .file-chip button svg { width: 11px; height: 11px; stroke: currentColor; stroke-width: 2.4; fill: none; stroke-linecap: round; }
   .copyright {
     font-size: 11.5px; color: var(--muted); text-align: center; padding: 12px 8px 4px;
@@ -533,7 +526,7 @@
     background: var(--surface-2); border: var(--rule); border-radius: var(--radius-lg); padding: 14px;
   }
   .mermaid-box svg { max-width: 100%; height: auto; }
-  .mmd-error { text-align: left; color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--code-bg)); border: 1px dashed color-mix(in srgb, var(--danger) 40%, transparent); padding: 12px; border-radius: var(--radius); font-size: 12.5px; white-space: pre-wrap; }
+  .mmd-error { text-align: left; color: var(--danger); background: rgba(var(--danger-rgb), 0.08); border: 1px dashed rgba(var(--danger-rgb), 0.4); padding: 12px; border-radius: var(--radius); font-size: 12.5px; white-space: pre-wrap; }
   .imgs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-bottom: 8px; }
   .imgs img { max-width: 220px; max-height: 180px; border-radius: var(--radius-lg); border: 2px solid var(--surface); box-shadow: var(--shadow-sm); object-fit: cover; }
   .user-col { display: flex; flex-direction: column; align-items: flex-end; max-width: 100%; }
@@ -570,7 +563,7 @@
   .sheet-actions button:hover { border-color: var(--border-strong); color: var(--text); }
   .sheet-actions .primary { background: var(--grad); border: 0; color: #fff; }
   .sheet-actions .primary:hover { color: #fff; background: var(--grad-hover); }
-  .sheet-actions .danger { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface-2)); border-color: color-mix(in srgb, var(--danger) 28%, transparent); }
+  .sheet-actions .danger { color: var(--danger); background: rgba(var(--danger-rgb), 0.1); border-color: rgba(var(--danger-rgb), 0.28); }
   .sheet-actions .danger-primary { background: var(--danger); border: 0; color: #fff; }
   .cf-body { margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--text-2); }
   .sheet-actions button[hidden] { display: none; }
@@ -581,7 +574,7 @@
     background: var(--surface-2); border: var(--rule); border-radius: var(--radius-lg); max-width: 520px;
     transition: border-color .18s, background-color .18s;
   }
-  .file-card:hover { border-color: color-mix(in srgb, var(--accent) 32%, var(--border)); }
+  .file-card:hover { border-color: rgba(var(--accent-rgb), 0.32); }
   .file-badge {
     width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; display: grid; place-items: center;
     background: var(--grad); color: #fff; font: 700 11px/1 var(--font-mono); letter-spacing: .03em;
@@ -595,7 +588,7 @@
     background: var(--surface); border: var(--rule); border-radius: var(--pill); padding: 7px 13px;
     font-size: 12px; font-weight: 600; color: var(--text-2); box-shadow: var(--shadow-sm);
   }
-  .file-actions button:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--accent); background: var(--accent-soft); }
+  .file-actions button:hover { border-color: rgba(var(--accent-rgb), 0.45); color: var(--accent); background: var(--accent-soft); }
   .file-src { margin: 0 0 14px; max-width: var(--col-w); }
   .file-src summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 3px 0 7px; user-select: none; }
   .file-src summary:hover { color: var(--accent); }
@@ -607,7 +600,7 @@
     color: var(--text-2); padding: 6px 12px; border-radius: var(--pill); cursor: pointer; user-select: none;
     border: var(--rule); background: var(--surface-2); white-space: nowrap; box-shadow: var(--shadow-sm);
   }
-  .think-toggle:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); color: var(--accent); background: var(--accent-soft); }
+  .think-toggle:hover { border-color: rgba(var(--accent-rgb), 0.4); color: var(--accent); background: var(--accent-soft); }
   .think-toggle .switch { width: 38px; height: 22px; }
   .think-toggle .slider::before { width: 16px; height: 16px; }
   .think-toggle .switch input:checked + .slider::before { transform: translateX(16px); }
@@ -654,8 +647,8 @@
   .hljs-title.class_, .hljs-type { color: var(--syn-type); }
   .hljs-attr, .hljs-variable, .hljs-property, .hljs-params { color: var(--syn-attr); }
   .hljs-tag, .hljs-meta { color: var(--muted); }
-  .hljs-addition { color: var(--syn-str); background: color-mix(in srgb, var(--syn-str) 14%, transparent); }
-  .hljs-deletion { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+  .hljs-addition { color: var(--syn-str); background: rgba(var(--syn-str-rgb), 0.14); }
+  .hljs-deletion { color: var(--danger); background: rgba(var(--danger-rgb), 0.14); }
 
   /* ---------- Message meta, votes ---------- */
   .file-chip img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--surface); box-shadow: var(--shadow-sm); }
@@ -668,7 +661,7 @@
   .jump-latest {
     position: absolute; left: 0; right: 0; width: fit-content; margin: 0 auto; bottom: 14px; z-index: 7;
     display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
-    background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius: var(--pill);
+    background: var(--surface); border: 1px solid rgba(var(--accent-rgb), 0.3); border-radius: var(--pill);
     padding: 7px 15px 7px 11px; font-size: 12.5px; font-weight: 600; color: var(--accent); box-shadow: var(--shadow-md);
     animation: rise .25s ease both; transition: background-color .16s, color .16s;
   }
@@ -732,7 +725,7 @@
   .select-wide:focus { border-color: var(--accent); box-shadow: var(--glow); }
   .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
   .btn-row button { background: var(--surface); border: var(--rule); border-radius: var(--pill); padding: 7px 13px; font-size: 12.5px; font-weight: 600; color: var(--text-2); transition: color .16s, border-color .16s, background-color .16s; }
-  .btn-row button:hover { border-color: color-mix(in srgb, var(--accent) 34%, var(--border)); color: var(--accent); background: var(--accent-soft); }
+  .btn-row button:hover { border-color: rgba(var(--accent-rgb), 0.34); color: var(--accent); background: var(--accent-soft); }
   .btn-row button.danger:hover { border-color: var(--danger); color: var(--danger); }
   .kv { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--muted); padding: 4px 0; font-variant-numeric: tabular-nums; }
   .kv b { color: var(--text-2); font-weight: 600; }
@@ -744,7 +737,7 @@
   }
   .mem-item span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .mem-item button { background: none; border: 0; color: var(--muted); font-size: 12px; padding: 4px 8px; border-radius: var(--pill); white-space: nowrap; }
-  .mem-item button:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+  .mem-item button:hover { color: var(--danger); background: rgba(var(--danger-rgb), 0.12); }
   .mem-empty { font-size: 12.5px; color: var(--muted); padding: 2px 0 6px; }
   .mem-add { display: flex; gap: 8px; }
   .mem-add input {
@@ -812,8 +805,8 @@
     font-size: 11.5px; color: var(--muted); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
     box-shadow: var(--shadow-sm); transition: color .16s, border-color .16s, background-color .16s;
   }
-  .panel-tab:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
-  .panel-tab.on { color: var(--accent); font-weight: 600; background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 34%, transparent); }
+  .panel-tab:hover { color: var(--text); border-color: rgba(var(--accent-rgb), 0.3); }
+  .panel-tab.on { color: var(--accent); font-weight: 600; background: var(--accent-soft); border-color: rgba(var(--accent-rgb), 0.34); }
   .panel-tools { display: flex; gap: 6px; margin-left: auto; align-items: center; }
   .panel-tools button {
     background: var(--surface); border: var(--rule); border-radius: var(--pill); padding: 5px 11px;
@@ -1585,44 +1578,110 @@
   .inline-frame { display: block; width: 100%; border: 0; background: #fff; }
   [data-mode="cli"] .inline-ui { display: none; }
 
-  /* Thunderbolt thinking indicator: flickers and glows. Always animates (not tied to Windows animation settings). */
-  .typing .tbolt {
-    display: inline-flex; width: 16px; height: 16px; flex-shrink: 0; color: var(--accent);
-    animation: tflicker 1.2s ease-in-out infinite;
-  }
-  .typing .tbolt svg { width: 100%; height: 100%; fill: currentColor; }
-  @keyframes tflicker {
-    0%, 100% { opacity: .45; transform: scale(.9); filter: drop-shadow(0 0 0 transparent); }
-    20% { opacity: 1; transform: scale(1.12); filter: drop-shadow(0 0 4px var(--accent)); }
-    35% { opacity: .6; transform: scale(.97); }
-    50% { opacity: 1; transform: scale(1.06); filter: drop-shadow(0 0 3px var(--accent)); }
-  }
   .typing .tlabel { animation: none; }
   .tl { animation: tletter 1.4s ease-in-out infinite; }
-  [data-mode="cli"] .tbolt { display: none; }
-
-  /* Thunder strike: a bolt drops from the top of the screen to the chat box when Volt answers */
-  .thunder { position: fixed; inset: 0; pointer-events: none; z-index: 45; display: none; }
-  .thunder.on { display: block; animation: boltFade .9s ease-out forwards; }
-  .thunder svg { position: absolute; left: 0; top: 0; width: 100%; height: 82%; overflow: visible; }
-  .thunder path { fill: none; stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.4; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px var(--accent)); }
-  .thunder .bolt-main { stroke-dasharray: 100; stroke-dashoffset: 100; animation: boltDraw .28s ease-out forwards; }
-  .thunder .bolt-branch { stroke-width: 1.6; stroke-dasharray: 100; stroke-dashoffset: 100; animation: boltDraw .2s ease-out .12s forwards; }
-  .thunder-flash { position: absolute; inset: 0; background: var(--accent); opacity: 0; animation: boltFlash .55s ease-out; }
-  @keyframes boltDraw { to { stroke-dashoffset: 0; } }
-  @keyframes boltFlash { 0% { opacity: .16; } 12% { opacity: .05; } 25% { opacity: .12; } 100% { opacity: 0; } }
-  @keyframes boltFade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
-  [data-mode="cli"] .thunder { display: none !important; }
-
-  /* Thunder strike v2 */
-  .thunder.on { display: block; animation: none; }
-  .thunder svg { height: 100%; }
-  .thunder path, .thunder polyline { filter: none; }
 
   /* Switches: the hidden checkbox covers the whole switch, so a click anywhere on it toggles the setting */
   .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
   .switch .slider { pointer-events: none; }
   .pop-item .switch input, .pop-item .switch { pointer-events: none; }
+  /* Colour tokens for the refreshed look. They come after every older skin, and are scoped
+     to pages outside the terminal (CLI) mode, which keeps its own palette. */
+  :root:not([data-mode="cli"]) {
+    color-scheme: light;
+    --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --bg: #fafaf9; --sidebar: #f3f3f1; --surface: #ffffff; --surface-2: #f6f6f4;
+    --text: #1c1c20; --text-2: #44444f; --muted: #74747f;
+    --border: #e6e6e2; --border-strong: #d0d0c9; --hover: #ededea;
+    --accent: #4f46e5; --accent-rgb: 79, 70, 229; --accent-hover: #4338ca; --accent-soft: #eeeefe;
+    --accent-2: #0d9488; --accent-3: #d97706;
+    --danger: #dc2626; --danger-rgb: 220, 38, 38;
+    --code-bg: #f5f5f2;
+    --syn-kw: #6d28d9; --syn-str: #15803d; --syn-num: #b45309; --syn-title: #be185d;
+    --syn-type: #0e7490; --syn-attr: #92400e; --syn-str-rgb: 21, 128, 61;
+    --grad: #4f46e5; --grad-hover: #4338ca; --grad-soft: #eeeefe;
+    --shadow-sm: 0 1px 2px rgba(24, 24, 32, .06);
+    --shadow-md: 0 4px 14px -8px rgba(24, 24, 32, .18);
+    --shadow-lg: 0 18px 40px -18px rgba(24, 24, 32, .28);
+    --glow: 0 0 0 3px rgba(79, 70, 229, .16);
+    --radius: 10px; --radius-lg: 14px; --radius-xl: 18px; --pill: 999px;
+    --rule: 1px solid var(--border);
+    --spring: cubic-bezier(.2, .8, .2, 1);
+  }
+  :root[data-theme="dark"]:not([data-mode="cli"]) {
+    color-scheme: dark;
+    --bg: #0f0f11; --sidebar: #131316; --surface: #18181c; --surface-2: #1e1e23;
+    --text: #ededf1; --text-2: #c4c4cc; --muted: #8b8b97;
+    --border: #2a2a31; --border-strong: #3a3a44; --hover: #22222a;
+    --accent: #818cf8; --accent-rgb: 129, 140, 248; --accent-hover: #a5b4fc; --accent-soft: #232347;
+    --danger: #f87171; --danger-rgb: 248, 113, 113;
+    --code-bg: #141418;
+    --syn-kw: #c4b5fd; --syn-str: #86efac; --syn-num: #fcd34d; --syn-title: #f9a8d4;
+    --syn-type: #67e8f9; --syn-attr: #fde68a; --syn-str-rgb: 134, 239, 172;
+    --grad: #4f46e5; --grad-hover: #4338ca; --grad-soft: #232347;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 4px 14px -8px rgba(0, 0, 0, .6);
+    --shadow-lg: 0 18px 40px -18px rgba(0, 0, 0, .75);
+    --glow: 0 0 0 3px rgba(129, 140, 248, .25);
+  }
+  /* Explicit control colours, so older skin rules cannot override them */
+  html:not([data-mode="cli"]) .new-btn { background: var(--grad); border: 0; color: #fff; }
+  html:not([data-mode="cli"]) .new-btn:hover { background: var(--grad-hover); color: #fff; }
+  html:not([data-mode="cli"]) .circle.send { background: var(--grad); color: #fff; border: 0; }
+  html:not([data-mode="cli"]) .circle.send:hover { background: var(--grad-hover); color: #fff; }
+  html:not([data-mode="cli"]) .switch input:checked + .slider { background: var(--accent); }
+  html:not([data-mode="cli"]) .msg.user .bubble { background: var(--surface-2); color: var(--text); }
+  html[data-theme="dark"]:not([data-mode="cli"]) .msg.user .bubble { background: var(--surface-2); color: var(--text); }
+
+  /* ============================ VISUAL REFRESH ============================
+     Flatter surfaces, one accent colour and clearer hierarchy. Colours come from the
+     tokens above, so light and dark both follow. The terminal (CLI) styling is unchanged. */
+  html:not([data-mode="cli"]) body { font-feature-settings: "cv11"; }
+  html:not([data-mode="cli"]) .sidebar { background: var(--sidebar); padding: 14px 12px 12px; }
+  html:not([data-mode="cli"]) .brand { padding: 4px 6px 16px; }
+  html:not([data-mode="cli"]) .wordmark { font-family: var(--font-serif); font-weight: 600; font-size: 18px; letter-spacing: -.01em; color: var(--text); }
+  html:not([data-mode="cli"]) .logo { height: 24px; border-radius: 6px; }
+  html:not([data-mode="cli"]) .icon-btn { border-radius: 8px; }
+  html:not([data-mode="cli"]) .icon-btn:hover { background: var(--hover); color: var(--text); }
+  html:not([data-mode="cli"]) .new-btn { border-radius: 10px; padding: 9px 12px; font-size: 13.5px; font-weight: 600; box-shadow: var(--shadow-sm); }
+  html:not([data-mode="cli"]) .side-tabs { background: var(--surface); box-shadow: var(--shadow-sm); }
+  html:not([data-mode="cli"]) .side-tab { font-size: 12.5px; }
+  html:not([data-mode="cli"]) .search { margin-top: 12px; border-radius: 10px; font-size: 13px; box-shadow: none; background: var(--surface); }
+  html:not([data-mode="cli"]) .group-label { font-size: 11px; letter-spacing: .06em; padding: 14px 10px 6px; }
+  html:not([data-mode="cli"]) .item { padding: 8px 10px; border-radius: 8px; font-size: 13.5px; }
+  html:not([data-mode="cli"]) .item:hover { background: var(--hover); }
+  html:not([data-mode="cli"]) .item.active { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow-sm), inset 0 0 0 1px var(--border); }
+  html:not([data-mode="cli"]) .side-foot { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-sm); }
+  html:not([data-mode="cli"]) .foot-row { border-radius: 8px; font-size: 13px; }
+  html:not([data-mode="cli"]) .foot-row:hover { background: var(--hover); color: var(--text); }
+  html:not([data-mode="cli"]) .copyright { font-size: 11px; }
+
+  html:not([data-mode="cli"]) .topbar { background: var(--bg); height: 52px; padding: 0 16px; }
+  html:not([data-mode="cli"]) .convo-title { font-size: 13.5px; font-weight: 600; }
+  html:not([data-mode="cli"]) .textbtn { background: transparent; border: 0; color: var(--muted); font-size: 12.5px; font-weight: 500; padding: 6px 10px; border-radius: 8px; }
+  html:not([data-mode="cli"]) .textbtn:hover { background: var(--hover); color: var(--text); }
+
+  html:not([data-mode="cli"]) .col { padding: 28px 28px 20px; }
+  html:not([data-mode="cli"]) .empty { margin-top: 9vh; }
+  html:not([data-mode="cli"]) .empty h1 { font-size: 32px; font-weight: 500; letter-spacing: -.02em; }
+  html:not([data-mode="cli"]) .suggest button { border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); padding: 14px 16px; }
+  html:not([data-mode="cli"]) .suggest button:hover { background: var(--surface); box-shadow: var(--shadow-md); }
+
+  html:not([data-mode="cli"]) .msg { margin: 0 0 24px; }
+  html:not([data-mode="cli"]) .msg.user .bubble { background: var(--surface-2); color: var(--text); border: var(--rule); border-radius: 16px 16px 4px 16px; box-shadow: var(--shadow-sm); padding: 10px 14px; font-size: calc(var(--fs) - .5px); }
+  html:not([data-mode="cli"]) .msg.assistant .body { font-family: var(--font-ui); font-size: var(--fs); line-height: 1.7; background: transparent; border: 0; box-shadow: none; padding: 0; }
+  html:not([data-mode="cli"]) .md code:not(pre code) { background: var(--hover); border-radius: 6px; padding: .1em .35em; border: 0; }
+  html:not([data-mode="cli"]) .code { border-radius: 12px; background: var(--code-bg); }
+  html:not([data-mode="cli"]) .file-card { border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm); }
+
+  html:not([data-mode="cli"]) .composer { border: 1px solid var(--border-strong); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-md); }
+  html:not([data-mode="cli"]) .composer:focus-within { border-color: var(--accent); box-shadow: var(--glow), var(--shadow-md); }
+  html:not([data-mode="cli"]) .circle.send { width: 36px; height: 36px; border-radius: 10px; }
+  html:not([data-mode="cli"]) .model-select { background: var(--surface-2); box-shadow: none; border-radius: 8px; }
+  html:not([data-mode="cli"]) .popover { border-radius: 16px; box-shadow: var(--shadow-lg); }
+  html:not([data-mode="cli"]) dialog.sheet { border-radius: 16px; }
+  html:not([data-mode="cli"]) .pill { background: var(--accent-soft); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -1836,9 +1895,6 @@
       <div class="set-row"><span>Code mode<span class="sub">Qwen models and a coding focus</span></span>
         <span class="switch"><input type="checkbox" id="setCode" /><span class="slider"></span></span>
       </div>
-      <div class="set-row"><span>Thunder sound<span class="sub">Plays a thunder crack when Volt answers</span></span>
-        <span class="switch"><input type="checkbox" id="setThunder" /><span class="slider"></span></span>
-      </div>
       <div class="set-row"><span>Shakespearean English<span class="sub">Volt answers in the style of Shakespeare</span></span>
         <span class="switch"><input type="checkbox" id="setShakes" /><span class="slider"></span></span>
       </div>
@@ -1938,7 +1994,6 @@
 <div class="menu-pop" id="menuPop" hidden></div>
 </div>
 
-<div class="thunder" id="thunder" aria-hidden="true"><div class="thunder-flash"></div><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path class="bolt-main" pathLength="100" d="M50 0 L44 26 L57 30 L40 58 L54 62 L46 84 L58 86 L50 100" /><path class="bolt-branch" pathLength="100" d="M44 26 L30 38 L36 42 L24 56" /></svg></div>
 <button type="button" class="gui-exit" id="guiExit" title="Switch back to the chat interface">GUI</button>
 <script>
 /* The OpenRouter key is NOT in this file. It lives in Vercel as
@@ -2061,6 +2116,9 @@ const ICONS = {
 // Fallback list. On load, Volt replaces this with the live list of free models from OpenRouter.
 const AUTO_MODEL = { group: 'General', id: 'openrouter/free', name: 'Auto' };
 const MODELS = [AUTO_MODEL];
+/* MANEX's Cation agent. Its API key lives on the server (api/cation.js), never in this page. */
+const CATION_ID = 'cation';
+const CATION_MODEL = { group: 'Agents', id: CATION_ID, name: 'Cation (MANEX)' };
 
 function groupForModel(m) {
   const s = (m.id + ' ' + (m.name || '')).toLowerCase();
@@ -2154,13 +2212,17 @@ function visibleModels() {
 }
 function syncCodeModels() {
   MODELS.length = 0;
-  MODELS.push(AUTO_MODEL, ...visibleModels());
+  MODELS.push(AUTO_MODEL, CATION_MODEL, ...visibleModels());
   if (!prefs.codeMode && QWEN_IDS.includes(prefs.model)) { prefs.model = AUTO_MODEL.id; persist(); }
   buildModelSelect();
 }
 function setCodeMode(on) {
   prefs.codeMode = !!on;
-  if (prefs.codeMode && (!prefs.model || prefs.model === AUTO_MODEL.id)) prefs.model = QWEN_CODE_MODELS[0].id;
+  if (prefs.codeMode) {
+    /* A rate limit or busy moment used to block a coding model for good. Give them another chance each time code mode turns on. */
+    prefs.badModels = (prefs.badModels || []).filter(id => !isCodingModel({ id, name: id }));
+    if (!prefs.model || prefs.model === AUTO_MODEL.id) prefs.model = QWEN_CODE_MODELS[0].id;
+  }
   persist();
   syncCodeModels();
   $('codeToggle').checked = prefs.codeMode === true;
@@ -3028,182 +3090,6 @@ function greeting() {
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
-/* ---------- Thunder sound (synthesised with Web Audio, no files needed) ---------- */
-let thunderCtx = null;
-let thunderWhite = null;
-let thunderBrown = null;
-function playSynthThunder() {
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return;
-  try {
-    if (!thunderCtx) thunderCtx = new AC();
-    if (thunderCtx.state === 'suspended') thunderCtx.resume();
-    const ctx = thunderCtx;
-    const rate = ctx.sampleRate;
-    if (!thunderWhite) {
-      thunderWhite = ctx.createBuffer(1, rate * 5, rate);
-      const d = thunderWhite.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    }
-    if (!thunderBrown) {
-      thunderBrown = ctx.createBuffer(1, rate * 6, rate);
-      const d = thunderBrown.getChannelData(0);
-      let last = 0;
-      for (let i = 0; i < d.length; i++) {
-        last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
-        d[i] = last * 3.5;
-      }
-    }
-    /* Measured from the reference thunder recording: loudness in dB every 0.1 s over 3.8 s,
-       with a sharp strike, a long roll, and a fade-out. */
-    const DUR = 3.85;
-    const DB = [-19, -14, -14, -12, -8, -13, -9, -10, -10, -15, -15, -17, -13, -15, -23, -24, -25, -27, -25, -24,
-                -25, -26, -23, -24, -28, -29, -30, -32, -26, -30, -27, -31, -32, -33, -31, -41, -49];
-    const lin = db => Math.pow(10, db / 20);
-    const t0 = ctx.currentTime + 0.03;
-
-    /* Loudness contour that shapes the roll and the body */
-    const contour = g => {
-      g.gain.setValueAtTime(lin(DB[0]), t0);
-      DB.forEach((db, k) => g.gain.linearRampToValueAtTime(lin(db), t0 + 0.05 + k * 0.1));
-      g.gain.linearRampToValueAtTime(0.0001, t0 + DUR);
-      return g;
-    };
-
-    /* Low rolling rumble (brown noise, low-passed) */
-    const rumbleSrc = ctx.createBufferSource();
-    rumbleSrc.buffer = thunderBrown;
-    const rumbleLP = ctx.createBiquadFilter(); rumbleLP.type = 'lowpass'; rumbleLP.frequency.value = 900; rumbleLP.Q.value = 0.707;
-    const rumbleGain = contour(ctx.createGain());
-    rumbleSrc.connect(rumbleLP); rumbleLP.connect(rumbleGain);
-
-    /* Mid-range body of the roll */
-    const bodySrc = ctx.createBufferSource();
-    bodySrc.buffer = thunderWhite;
-    const bodyBP = ctx.createBiquadFilter(); bodyBP.type = 'bandpass'; bodyBP.frequency.value = 329; bodyBP.Q.value = 0.42;
-    const bodyGain = contour(ctx.createGain());
-    const bodyLevel = ctx.createGain(); bodyLevel.gain.value = 0.5;
-    bodySrc.connect(bodyBP); bodyBP.connect(bodyLevel); bodyLevel.connect(bodyGain);
-
-    /* The crack at the strike: bright noise that dies away in about half a second */
-    const crackSrc = ctx.createBufferSource();
-    crackSrc.buffer = thunderWhite;
-    const crackBP = ctx.createBiquadFilter(); crackBP.type = 'bandpass'; crackBP.frequency.value = 1414; crackBP.Q.value = 0.4;
-    const crackGain = ctx.createGain();
-    crackGain.gain.setValueAtTime(0.75, t0);
-    crackGain.gain.exponentialRampToValueAtTime(0.75 * Math.exp(-4), t0 + 0.48);
-    crackSrc.connect(crackBP); crackBP.connect(crackGain);
-
-    /* Mix, gently saturate so the level sits like the reference, then play */
-    const mix = ctx.createGain();
-    rumbleGain.connect(mix); bodyGain.connect(mix); crackGain.connect(mix);
-    const preGain = ctx.createGain(); preGain.gain.value = 1 / 0.635;
-    const shaper = ctx.createWaveShaper();
-    const curve = new Float32Array(2048);
-    for (let i = 0; i < curve.length; i++) {
-      const x = (i / (curve.length - 1)) * 2 - 1;
-      curve[i] = Math.tanh(3 * x) / Math.tanh(3);
-    }
-    shaper.curve = curve;
-    const out = ctx.createGain(); out.gain.value = 0.92;
-    mix.connect(preGain); preGain.connect(shaper); shaper.connect(out); out.connect(ctx.destination);
-
-    rumbleSrc.start(t0, Math.random() * 3); rumbleSrc.stop(t0 + DUR + 0.1);
-    bodySrc.start(t0, Math.random() * 2); bodySrc.stop(t0 + DUR + 0.1);
-    crackSrc.start(t0, Math.random()); crackSrc.stop(t0 + 0.5);
-  } catch { /* audio is optional */ }
-}
-
-/* The thunder sound is synthesised in the browser and matched to the reference recording. */
-function playThunder() {
-  if (prefs.thunderSound === false) return;
-  playSynthThunder();
-}
-
-/* ---------- Thunder strike when Volt answers ---------- */
-function thunderStrike() {
-  if (prefs.cli) return;
-  const wrap = $('thunder');
-  const svg = wrap.querySelector('svg');
-  const flash = wrap.querySelector('.thunder-flash');
-  const w = innerWidth, h = innerHeight;
-  const box = document.querySelector('.composer')?.getBoundingClientRect();
-  const tx = box ? box.left + box.width * (0.3 + Math.random() * 0.4) : w * 0.5;
-  const ty = box ? box.top : h * 0.8;
-  const size = Math.min(w, h);
-
-  /* Random midpoint displacement gives a jagged, natural-looking bolt */
-  const jag = (x1, y1, x2, y2, amp, depth) => {
-    if (depth === 0) return [[x2, y2]];
-    const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * amp;
-    const my = (y1 + y2) / 2 + (Math.random() - 0.5) * amp * 0.25;
-    return [...jag(x1, y1, mx, my, amp * 0.58, depth - 1), ...jag(mx, my, x2, y2, amp * 0.58, depth - 1)];
-  };
-  const start = [tx + (Math.random() - 0.5) * w * 0.22, -20];
-  const trunk = [start, ...jag(start[0], start[1], tx, ty, size * 0.11, 7)];
-  const branches = [0, 1].map(() => {
-    const k = Math.floor(trunk.length * (0.25 + Math.random() * 0.4));
-    const [bx, by] = trunk[k];
-    const dir = Math.random() < 0.5 ? -1 : 1;
-    return [[bx, by], ...jag(bx, by, bx + dir * w * (0.08 + Math.random() * 0.1), by + h * (0.1 + Math.random() * 0.12), size * 0.05, 4)];
-  });
-
-  /* Build the SVG at window size */
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  svg.setAttribute('preserveAspectRatio', 'none');
-  svg.innerHTML = '';
-  const NS = 'http://www.w3.org/2000/svg';
-  const group = document.createElementNS(NS, 'g');
-  svg.appendChild(group);
-  const layers = [
-    { width: 12, color: 'var(--accent)', opacity: .32, blur: true },
-    { width: 4.5, color: 'var(--accent)', opacity: .9 },
-    { width: 1.6, color: '#ffffff', opacity: 1 }
-  ];
-  const draw = (pts, delay, widthScale = 1) => {
-    const animated = [];
-    layers.forEach(layer => {
-      const pl = document.createElementNS(NS, 'polyline');
-      pl.setAttribute('points', pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
-      pl.setAttribute('fill', 'none');
-      pl.setAttribute('stroke', layer.color);
-      pl.setAttribute('stroke-width', layer.width * widthScale);
-      pl.setAttribute('stroke-linejoin', 'round');
-      pl.setAttribute('stroke-linecap', 'round');
-      pl.setAttribute('opacity', layer.opacity);
-      if (layer.blur) pl.style.filter = 'blur(3px)';
-      group.appendChild(pl);
-      animated.push(pl);
-    });
-    animated.forEach(el => {
-      const L = el.getTotalLength();
-      el.animate([{ strokeDasharray: `${L} ${L}`, strokeDashoffset: L }, { strokeDasharray: `${L} ${L}`, strokeDashoffset: 0 }],
-        { duration: 110, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
-    });
-  };
-  draw(trunk, 0);
-  branches.forEach((b, i) => draw(b, 70 + i * 35, 0.6));
-
-  /* Impact ring where the bolt meets the chat box */
-  const ring = document.createElementNS(NS, 'circle');
-  ring.setAttribute('cx', tx); ring.setAttribute('cy', ty); ring.setAttribute('r', 4);
-  ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', 'var(--accent)'); ring.setAttribute('stroke-width', 2);
-  group.appendChild(ring);
-  ring.animate([{ r: 4, opacity: 1 }, { r: 60, opacity: 0 }], { duration: 520, delay: 110, easing: 'ease-out', fill: 'forwards' });
-
-  /* Restart the whole effect: the bolt flickers out, the screen flashes once */
-  wrap.classList.remove('on');
-  void wrap.offsetWidth;
-  wrap.classList.add('on');
-  group.animate([
-    { opacity: 1, offset: 0 }, { opacity: .35, offset: .18 }, { opacity: .95, offset: .26 },
-    { opacity: .45, offset: .4 }, { opacity: .8, offset: .48 }, { opacity: 0, offset: 1 }
-  ], { duration: 900, fill: 'forwards' });
-  flash.animate([{ opacity: 0 }, { opacity: .22, offset: .03 }, { opacity: .06, offset: .12 }, { opacity: .14, offset: .2 }, { opacity: 0 }],
-    { duration: 650 });
-  playThunder();
-}
-
 /* ---------- Pinned messages ---------- */
 function pinExcerpt(m) {
   const raw = (m.shown ?? m.content ?? '').replace(/```[\s\S]*?```/g, ' [code] ').replace(/[*_#`>~\[\]]/g, '').replace(/\s+/g, ' ').trim();
@@ -3333,8 +3219,7 @@ function bodyHTML(m) {
     const dots = [0, 1, 2].map(k => `<i style="${dotStyle(k)}"></i>`).join('');
     /* Each letter and the pulse ring get a clock-based delay, so re-rendering keeps the motion smooth. */
     const word = [...'Thinking'].map((ch, k) => `<span class="tl" style="animation-delay:-${(t + k * 90) % 1400}ms">${ch}</span>`).join('');
-    const orb = `<span class="tbolt" aria-hidden="true" style="animation-delay:-${t % 1200}ms"><svg viewBox="0 0 24 24"><path d="M13.5 1.5 4 13.5h6.5L9 22.5 20 9.5h-6.8z"/></svg></span>`;
-    h += `<span class="typing" role="status" aria-label="Volt is thinking">${orb}<span class="tlabel">${word}</span><span class="tdots">${dots}</span></span>`;
+    h += `<span class="typing" role="status" aria-label="Volt is thinking"><span class="tlabel">${word}</span><span class="tdots">${dots}</span></span>`;
   }
   return h;
 }
@@ -3597,6 +3482,63 @@ function webPromptFor(results) {
     '\n\nUse these results when they are relevant. Cite the links you use in square brackets, for example [1], and list them at the end under "Sources". This overrides the rule above about not naming sources. Say when these sources may not cover recent events.';
 }
 
+/* ---------- Stream and error helpers ---------- */
+/* Reads a reply as server-sent events. Falls back to plain text when a browser gives no streaming body. */
+async function* sseLines(res) {
+  if (res.body && typeof res.body.getReader === 'function') {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      yield* lines;
+    }
+    if (buffer) yield buffer;
+  } else {
+    yield* (await res.text()).split('\n');
+  }
+}
+function streamError(message, status) {
+  const e = new Error(message);
+  if (status !== undefined) e.status = status;
+  return e;
+}
+/* Rate limits, server errors, dropped connections and unknown stream errors usually clear up on their own. */
+function isTransientError(err) {
+  if (err?.name === 'TypeError') return true;
+  if (err?.status === undefined) return true;
+  return err.status === 408 || err.status === 429 || err.status >= 500;
+}
+function friendlyError(err, model) {
+  if (err?.name === 'TypeError') return `Volt could not reach the server. Check your connection and try again. (${err.message})`;
+  if (err?.status === 429 && model !== CATION_ID) return 'This model is rate-limited right now. Wait a minute, or pick another model.';
+  return err?.message || 'Something went wrong. Please try again.';
+}
+/* Next coding model to try when the current one is busy. Skips in-browser models and anything marked as gone. */
+function nextCodingModel(failed) {
+  const bad = prefs.badModels || [];
+  const next = visibleModels().find(m => m.id !== failed && m.id !== AUTO_MODEL.id && m.id !== CATION_ID &&
+    !m.id.startsWith('webllm:') && !bad.includes(m.id) && !isBlockedModel(m.id));
+  return next ? next.id : null;
+}
+/* Cation takes plain user and assistant turns only, so images and Volt's own system prompt are left out. */
+function cationMessages(list) {
+  return list
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .map(m => ({
+      role: m.role,
+      content: Array.isArray(m.content)
+        ? m.content.filter(x => x.type === 'text').map(x => x.text).join('\n')
+        : String(m.content || '')
+    }))
+    .filter(m => m.content.trim())
+    .slice(-30);
+}
+
 async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const c = current();
   const tgt = opts.target || assistantMsg;
@@ -3613,72 +3555,79 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   if (opts.alt) compareCtrls.push(ctrl); else abortCtrl = ctrl;
 
   const lastUser = [...c.messages].reverse().find(m => m.role === 'user' && m !== assistantMsg);
-  const webNote = prefs.web ? webPromptFor(await webContext(lastUser?.shown ?? lastUser?.content ?? '')) : '';
+  const webNote = prefs.web && useModel !== CATION_ID ? webPromptFor(await webContext(lastUser?.shown ?? lastUser?.content ?? '')) : '';
 
   // Calls our own serverless route, which adds the secret key on the server.
   // In-browser Qwen models run on this computer through WebLLM, with no server call.
   const reqMessages = [{ role: 'system', content: buildSystemPrompt() + webNote }, ...payloadMessages];
-  const res = WEBLLM_MODELS[useModel]
-    ? webllmSSEResponse(useModel, reqMessages, ctrl.signal)
-    : await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: useModel,
-          stream: true,
-          reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
-          ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
-          messages: reqMessages
-        }),
-        signal: ctrl.signal
-      });
+  let res;
+  if (useModel === CATION_ID) {
+    /* Our own server route holds the Cation key and forwards the chat. */
+    res = await fetch('/api/cation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: cationMessages(payloadMessages) }),
+      signal: ctrl.signal
+    });
+  } else if (WEBLLM_MODELS[useModel]) {
+    res = webllmSSEResponse(useModel, reqMessages, ctrl.signal);
+  } else {
+    res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: useModel,
+        stream: true,
+        reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
+        ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
+        messages: reqMessages
+      }),
+      signal: ctrl.signal
+    });
+  }
 
   if (!res.ok) {
     let msg = `Request failed (HTTP ${res.status})`;
     try { const j = await res.json(); if (j.error?.message) msg = j.error.message; } catch {}
-    throw new Error(msg);
+    throw streamError(msg, res.status);
   }
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
   const started = Date.now();
-  let buffer = '', frame = 0;
+  let frame = 0;
 
   // Re-rendering markdown and highlighting code on every token is expensive,
-  // so paint at most once per animation frame.
+  // so paint at most once per animation frame. A painting hiccup must never be
+  // reported as a failed reply, so painting is guarded.
   const paint = () => {
     frame = 0;
     if (!bodyEl?.isConnected) return;
-    bodyEl.innerHTML = opts.render ? opts.render() : bodyHTML(assistantMsg);
-    renderMath(bodyEl);
-    const nearBottom = els.chat.scrollHeight - els.chat.scrollTop - els.chat.clientHeight < 120;
-    if (nearBottom) els.chat.scrollTop = els.chat.scrollHeight;
-    updateJump();
-    liveSync(tgt);
+    try {
+      bodyEl.innerHTML = opts.render ? opts.render() : bodyHTML(assistantMsg);
+      renderMath(bodyEl);
+      const nearBottom = els.chat.scrollHeight - els.chat.scrollTop - els.chat.clientHeight < 120;
+      if (nearBottom) els.chat.scrollTop = els.chat.scrollHeight;
+      updateJump();
+      liveSync(tgt);
+    } catch (err) {
+      console.warn('Volt could not repaint the reply:', err);
+    }
   };
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      const l = line.trim();
-      if (!l.startsWith('data:')) continue;
-      const data = l.slice(5).trim();
-      if (!data || data === '[DONE]') continue;
-      let j; try { j = JSON.parse(data); } catch { continue; }
-      if (j.error) throw new Error(j.error.message || 'Model returned an error');
-      const d = j.choices?.[0]?.delta || {};
-      const r = d.reasoning ?? d.reasoning_content;
-      if (r) tgt.reasoning += r;
-      if (d.content) {
-        if (tgt.reasoning && tgt.thinkMs === undefined) tgt.thinkMs = Date.now() - started;
-        tgt.content += d.content;
-      }
-      if (bodyEl && !frame) frame = requestAnimationFrame(paint);
+  for await (const line of sseLines(res)) {
+    const l = line.trim();
+    if (!l.startsWith('data:')) continue;
+    const data = l.slice(5).trim();
+    if (!data || data === '[DONE]') continue;
+    let j; try { j = JSON.parse(data); } catch { continue; }
+    if (j.error) throw streamError(j.error.message || 'The model returned an error.');
+    const d = j.choices?.[0]?.delta || {};
+    const r = d.reasoning ?? d.reasoning_content;
+    if (r) tgt.reasoning += r;
+    if (d.content) {
+      if (tgt.reasoning && tgt.thinkMs === undefined) tgt.thinkMs = Date.now() - started;
+      tgt.content += d.content;
     }
+    if (bodyEl && !frame) frame = requestAnimationFrame(paint);
   }
   if (frame) cancelAnimationFrame(frame);
   if (tgt.reasoning && tgt.thinkMs === undefined) tgt.thinkMs = Date.now() - started;
@@ -3700,32 +3649,43 @@ function harvestMemory(m) {
   }
 }
 
-async function runAssistant(assistantMsg) {
+async function runAssistant(assistantMsg, retried = false) {
   const c = current();
   setBusy(true);
   panel.liveOpened = false;
   renderAll();
   const bodyEl = els.col.querySelector(`.msg[data-index="${c.messages.indexOf(assistantMsg)}"] .body`);
+  let retryWith = null;
   try {
     await streamInto(assistantMsg, bodyEl);
     if (looksLikeClassifier(assistantMsg.content)) {
-      throw new Error('This model returned a safety label instead of a reply, so it is not a chat model. It has been removed from the list. Send your message again.');
+      const e = new Error('This model returned a safety label instead of a reply, so it is not a chat model. It has been removed from the list. Send your message again.');
+      e.permanent = true;
+      throw e;
     }
     if (!assistantMsg.content) assistantMsg.content = '_No response received. Try another model._';
-    thunderStrike();
-    if (prefs.speak) speak(assistantMsg.content);
+    /* The reply is already on screen. Reading it aloud is optional and can never turn it into an error. */
+    try { if (prefs.speak) speak(assistantMsg.content); } catch (e) { console.warn('Read aloud failed:', e); }
   } catch (err) {
     if (err.name === 'AbortError') {
       assistantMsg.content = assistantMsg.content || '_Stopped._';
     } else {
-      assistantMsg.error = true;
-      assistantMsg.content = `**Error:** ${err.message}`;
       const failed = assistantMsg.model;
-      if (failed && failed !== AUTO_MODEL.id && failed !== prefs.customId) {
+      assistantMsg.error = true;
+      assistantMsg.content = `**Error:** ${friendlyError(err, failed)}`;
+      /* Only a model that is clearly gone is dropped for good. Rate limits and network hiccups are not its fault. */
+      const gone = err.permanent === true || err.status === 400 || err.status === 404;
+      if (gone && failed && failed !== AUTO_MODEL.id && failed !== CATION_ID && failed !== prefs.customId) {
         prefs.badModels = [...new Set([...(prefs.badModels || []), failed])];
         dropBlockedModels();
         if (prefs.model === failed) prefs.model = AUTO_MODEL.id;
         buildModelSelect();
+      }
+      /* In code mode, a busy coding model hands the request to the next one, once. */
+      if (!retried && prefs.codeMode && !err.permanent && isTransientError(err) &&
+          failed && !failed.startsWith('webllm:') && failed !== CATION_ID) {
+        retryWith = nextCodingModel(failed);
+        if (retryWith) toast(`${shortModel(failed)} is busy. Trying ${shortModel(retryWith)}.`);
       }
     }
   } finally {
@@ -3736,6 +3696,11 @@ async function runAssistant(assistantMsg) {
     persist();
     renderAll();
     liveSync(assistantMsg, true);
+  }
+  if (retryWith) {
+    assistantMsg.content = ''; assistantMsg.reasoning = ''; assistantMsg.error = false; assistantMsg.thinkMs = undefined;
+    oneShotModel = retryWith;
+    return runAssistant(assistantMsg, true);
   }
 }
 
@@ -4142,7 +4107,7 @@ let mermaidSeq = 0;
 function enc(s) {
   return encodeURIComponent(s).replace(/[*_~()!'`]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 }
-function shortModel(id) { return id === AUTO_MODEL.id ? 'Auto' : id.replace(/:free$/, '').split('/').pop(); }
+function shortModel(id) { return id === AUTO_MODEL.id ? 'Auto' : id === CATION_ID ? 'Cation' : id.replace(/:free$/, '').split('/').pop(); }
 
 /* Math: $...$, $$...$$, \(...\) and \[...\] are swapped for placeholders, then rendered by KaTeX */
 function protectMath(text) {
@@ -4609,8 +4574,7 @@ function openSettings() {
   $('setReason').checked = prefs.showReasoning !== false;
   $('setAutoPrev').checked = prefs.autoPreview !== false;
   $('setShakes').checked = prefs.shakespeare === true;
-  $('setThunder').checked = prefs.thunderSound !== false;
-  $('setCode').checked = prefs.codeMode === true;
+    $('setCode').checked = prefs.codeMode === true;
   renderMemory();
   renderStats();
   fillVoices();
@@ -4628,7 +4592,6 @@ $('setSpeak').addEventListener('change', e => { prefs.speak = e.target.checked; 
 $('setReason').addEventListener('change', e => { prefs.showReasoning = e.target.checked; reasonToggle.checked = e.target.checked; persist(); renderAll(false); });
 $('setAutoPrev').addEventListener('change', e => { prefs.autoPreview = e.target.checked; persist(); });
 $('setCode').addEventListener('change', e => setCodeMode(e.target.checked));
-$('setThunder').addEventListener('change', e => { prefs.thunderSound = e.target.checked; persist(); if (e.target.checked) playThunder(); });
 $('setShakes').addEventListener('change', e => { prefs.shakespeare = e.target.checked; persist(); toast(prefs.shakespeare ? 'Volt will answer in Shakespearean English.' : 'Back to plain English.'); });
 $('setVoice').addEventListener('change', e => { prefs.voice = e.target.value; persist(); });
 $('setSearxng').value = prefs.searxng || '';
@@ -4854,6 +4817,10 @@ els.closeSidebar.addEventListener('click', closeMobileSidebar);
 els.scrim.addEventListener('click', closeMobileSidebar);
 
 /* ============================ INIT ============================ */
+/* Very old browsers (Chrome on Windows 8 stops at version 109) can lack features Volt needs. Say so plainly. */
+if (!window.fetch || !window.TextDecoder || !window.indexedDB) {
+  setTimeout(() => toast('This browser is too old to run Volt well. Update Chrome or use Edge.'), 800);
+}
 applyTheme();
 applyAppearance();
 applyMode();
