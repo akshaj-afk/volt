@@ -1756,6 +1756,361 @@
     html:not([data-mode="cli"]) .think-toggle span:first-child,
     html:not([data-mode="cli"]) .code-toggle span:first-child { display: none; }
   }
+  /* ============================================================================
+     WINDOWS 11 LAYER. Mica for the window and the sidebar, acrylic for the
+     composer, cards and flyouts. Translucent layers sit over a soft gradient
+     wallpaper, with thin light edges and a faint grain. Blur is limited to the
+     large surfaces so long chats stay smooth on older machines. Scoped to pages
+     outside CLI mode, so the terminal skin is untouched.
+     ============================================================================ */
+  :root:not([data-mode="cli"]) {
+    --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --blur: blur(40px) saturate(170%);
+    --blur-strong: blur(60px) saturate(180%);
+    --base-1: #f8f8fd;
+    --base-2: #eef0f9;
+    --base-3: #f5f2f9;
+    --mica: rgba(255, 255, 255, .34);
+    --acrylic: rgba(255, 255, 255, .66);
+    --acrylic-hover: rgba(255, 255, 255, .86);
+    --acrylic-strong: rgba(251, 251, 255, .9);
+    --solid: #ffffff;
+    --surface: var(--acrylic);
+    --surface-2: rgba(22, 22, 56, .045);
+    --sidebar: var(--mica);
+    --hover: rgba(22, 22, 56, .06);
+    --field: rgba(22, 22, 56, .045);
+    --border: rgba(22, 22, 56, .09);
+    --border-strong: rgba(22, 22, 56, .17);
+    --edge: rgba(22, 22, 56, .10);
+    --divider: rgba(22, 22, 56, .08);
+    --glass-line: rgba(255, 255, 255, .88);
+    --code-glass: rgba(250, 250, 255, .66);
+    --code-bg: var(--code-glass);
+    --accent-soft: rgba(79, 70, 229, .10);
+    --grad-soft: var(--accent-soft);
+    --shadow-sm: 0 1px 2px rgba(22, 22, 56, .06);
+    --shadow-md: 0 8px 22px -14px rgba(22, 22, 56, .22);
+    --shadow-lg: 0 24px 50px -22px rgba(22, 22, 56, .34);
+    --lift: inset 0 1px 0 rgba(255, 255, 255, .9), 0 1px 2px rgba(22, 22, 56, .06), 0 10px 26px -16px rgba(22, 22, 56, .24);
+    --flyout: inset 0 1px 0 rgba(255, 255, 255, .9), 0 30px 60px -22px rgba(22, 22, 56, .38), 0 2px 8px rgba(22, 22, 56, .08);
+    --orb-1: rgba(129, 140, 248, .32);
+    --orb-2: rgba(56, 189, 248, .22);
+    --orb-3: rgba(244, 114, 182, .14);
+    --radius: 10px; --radius-lg: 14px; --radius-xl: 18px;
+  }
+  :root[data-theme="dark"]:not([data-mode="cli"]) {
+    --base-1: #17151c; --base-2: #0f0d12; --base-3: #0d0a0a;
+    --mica: rgba(26, 24, 31, .46);
+    --acrylic: rgba(42, 40, 50, .6);
+    --acrylic-hover: rgba(58, 55, 68, .86);
+    --acrylic-strong: rgba(38, 36, 46, .9);
+    --solid: #1d1b23;
+    --surface: var(--acrylic);
+    --surface-2: rgba(255, 255, 255, .05);
+    --sidebar: var(--mica);
+    --hover: rgba(255, 255, 255, .07);
+    --field: rgba(255, 255, 255, .055);
+    --border: rgba(255, 255, 255, .08);
+    --border-strong: rgba(255, 255, 255, .14);
+    --edge: rgba(255, 255, 255, .10);
+    --divider: rgba(255, 255, 255, .07);
+    --glass-line: rgba(255, 255, 255, .09);
+    --code-glass: rgba(12, 11, 15, .55);
+    --code-bg: var(--code-glass);
+    --accent-soft: rgba(129, 140, 248, .14);
+    --grad-soft: var(--accent-soft);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 10px 26px -14px rgba(0, 0, 0, .6);
+    --shadow-lg: 0 26px 56px -22px rgba(0, 0, 0, .8);
+    --lift: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 2px rgba(0, 0, 0, .4), 0 14px 30px -18px rgba(0, 0, 0, .7);
+    --flyout: inset 0 1px 0 rgba(255, 255, 255, .08), 0 34px 70px -22px rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .04);
+    --orb-1: rgba(79, 70, 229, .26);
+    --orb-2: rgba(14, 165, 233, .11);
+    --orb-3: rgba(168, 85, 247, .11);
+  }
+
+  /* Wallpaper: a soft gradient with coloured light behind the window, for the Mica layers to blur */
+  html:not([data-mode="cli"]) body {
+    background-color: var(--base-2);
+    background-image: linear-gradient(160deg, var(--base-1) 0%, var(--base-2) 55%, var(--base-3) 100%);
+  }
+  html:not([data-mode="cli"]) body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(46vmax 42vmax at 6% 12%, var(--orb-1), transparent 70%),
+      radial-gradient(40vmax 36vmax at 96% 4%, var(--orb-2), transparent 70%),
+      radial-gradient(50vmax 40vmax at 80% 100%, var(--orb-3), transparent 70%),
+      radial-gradient(36vmax 30vmax at 18% 96%, var(--orb-2), transparent 70%);
+  }
+  html:not([data-mode="cli"]) .app { position: relative; z-index: 1; }
+
+  /* Mica: the window itself is transparent, so the wallpaper shows through */
+  html:not([data-mode="cli"]) .sidebar {
+    background: var(--noise), linear-gradient(var(--mica), var(--mica));
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border-right: 1px solid var(--divider);
+  }
+  html:not([data-mode="cli"]) .topbar { background: transparent; border-bottom: 1px solid transparent; }
+  html:not([data-mode="cli"]) .chat { background: var(--chat-glow); }
+  html:not([data-mode="cli"]) .composer-wrap { background: none; }
+  html:not([data-mode="cli"]) .panel {
+    background: var(--noise), linear-gradient(var(--mica), var(--mica));
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border-left: 1px solid var(--divider);
+  }
+  html:not([data-mode="cli"]) .panel-stage { border: 1px solid var(--glass-line); box-shadow: var(--flyout); }
+
+  /* Navigation and controls: fluent fills, with a short accent bar on the selected item */
+  html:not([data-mode="cli"]) .new-btn {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0)), var(--accent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -10px rgba(var(--accent-rgb), .9);
+  }
+  html:not([data-mode="cli"]) .new-btn:hover {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0)), var(--accent-hover);
+  }
+  html:not([data-mode="cli"]) .side-tabs { background: var(--field); border: 1px solid var(--divider); }
+  html:not([data-mode="cli"]) .side-tab.on { background: var(--acrylic-strong); color: var(--text); box-shadow: var(--lift); }
+  html:not([data-mode="cli"]) .search { background: var(--field); border: 1px solid var(--divider); }
+  html:not([data-mode="cli"]) .search:focus {
+    background: var(--acrylic-strong); border-color: rgba(var(--accent-rgb), .6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .16);
+  }
+  html:not([data-mode="cli"]) .item { position: relative; }
+  html:not([data-mode="cli"]) .item.active { background: var(--acrylic-strong); color: var(--text); box-shadow: var(--lift); }
+  html:not([data-mode="cli"]) .item.active::before {
+    content: ""; position: absolute; left: 3px; top: 50%; width: 3px; height: 16px; border-radius: 3px;
+    background: var(--accent); transform: translateY(-50%);
+  }
+  html:not([data-mode="cli"]) .frow:hover { background: var(--hover); }
+  html:not([data-mode="cli"]) .textbtn {
+    background: var(--acrylic); border: 1px solid var(--edge); box-shadow: var(--lift);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  }
+  html:not([data-mode="cli"]) .textbtn:hover { background: var(--acrylic-hover); border-color: var(--border-strong); color: var(--text); }
+  html:not([data-mode="cli"]) .plus-btn,
+  html:not([data-mode="cli"]) .model-select,
+  html:not([data-mode="cli"]) .think-toggle { background: var(--field); border: 1px solid var(--divider); }
+  html:not([data-mode="cli"]) .model-select option,
+  html:not([data-mode="cli"]) .model-select optgroup { background: var(--solid); color: var(--text); }
+
+  /* Cards and messages */
+  html:not([data-mode="cli"]) .suggest button {
+    background: var(--acrylic); border: 1px solid var(--glass-line); box-shadow: var(--lift);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    transition: transform .2s var(--ease), background-color .16s, border-color .16s;
+  }
+  html:not([data-mode="cli"]) .suggest button:hover {
+    background: var(--acrylic-hover); border-color: rgba(var(--accent-rgb), .4); transform: translateY(-1px);
+  }
+  html:not([data-mode="cli"]) .msg.user .bubble {
+    background: rgba(var(--accent-rgb), .13); border: 1px solid rgba(var(--accent-rgb), .26);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 8px 20px -16px rgba(var(--accent-rgb), .7);
+  }
+  html:not([data-mode="cli"]) .code { background: var(--code-glass); border: 1px solid var(--divider); box-shadow: var(--lift); }
+  html:not([data-mode="cli"]) .code-head { background: var(--surface-2); }
+  html:not([data-mode="cli"]) .file-card {
+    background: var(--noise), linear-gradient(var(--acrylic), var(--acrylic));
+    border: 1px solid var(--glass-line); box-shadow: var(--lift);
+  }
+
+  /* Composer: acrylic, floating over the wallpaper */
+  html:not([data-mode="cli"]) .composer {
+    background: var(--noise), linear-gradient(var(--acrylic-strong), var(--acrylic-strong));
+    -webkit-backdrop-filter: var(--blur-strong); backdrop-filter: var(--blur-strong);
+    border: 1px solid var(--glass-line); box-shadow: var(--flyout);
+  }
+  html:not([data-mode="cli"]) .composer:focus-within {
+    border-color: rgba(var(--accent-rgb), .55);
+    box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .14), var(--flyout);
+  }
+
+  /* Flyouts, toasts and dialogs: the strongest acrylic, with a light edge */
+  html:not([data-mode="cli"]) .popover,
+  html:not([data-mode="cli"]) .menu-pop,
+  html:not([data-mode="cli"]) .slash-pop {
+    background: var(--noise), linear-gradient(var(--acrylic-strong), var(--acrylic-strong));
+    -webkit-backdrop-filter: var(--blur-strong); backdrop-filter: var(--blur-strong);
+    border: 1px solid var(--glass-line); border-radius: 12px; box-shadow: var(--flyout);
+  }
+  html:not([data-mode="cli"]) .jump-latest,
+  html:not([data-mode="cli"]) .speaking {
+    background: var(--acrylic-strong); border: 1px solid var(--glass-line);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  }
+  html:not([data-mode="cli"]) dialog.sheet {
+    background: var(--noise), linear-gradient(var(--acrylic-strong), var(--acrylic-strong));
+    -webkit-backdrop-filter: var(--blur-strong); backdrop-filter: var(--blur-strong);
+    border: 1px solid var(--glass-line); border-radius: 14px; box-shadow: var(--flyout);
+  }
+  html:not([data-mode="cli"]) dialog.sheet::backdrop {
+    background: rgba(14, 14, 32, .24);
+    -webkit-backdrop-filter: blur(8px) saturate(120%); backdrop-filter: blur(8px) saturate(120%);
+  }
+
+  /* Older browsers without backdrop blur get solid layers; users who ask for less transparency get them too */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root:not([data-mode="cli"]) { --mica: #f2f2f8; --acrylic: #ffffff; --acrylic-hover: #ffffff; --acrylic-strong: #ffffff; }
+    :root[data-theme="dark"]:not([data-mode="cli"]) { --mica: #141318; --acrylic: #1f1d25; --acrylic-hover: #2a2832; --acrylic-strong: #22202a; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root:not([data-mode="cli"]) { --blur: blur(0px); --blur-strong: blur(0px); --mica: #f2f2f8; --acrylic: #ffffff; --acrylic-hover: #ffffff; --acrylic-strong: #ffffff; }
+    :root[data-theme="dark"]:not([data-mode="cli"]) { --mica: #141318; --acrylic: #1f1d25; --acrylic-hover: #2a2832; --acrylic-strong: #22202a; }
+  }
+
+  /* ============================================================================
+     GLASS PASS. Stronger glassmorphism. A livelier wallpaper gives the blur
+     something to frost. The sidebar and preview panel float as glass panes with
+     an inset edge, the header is a glass bar the chat scrolls beneath, and each
+     pane has a sheen across its face and a gradient rim that catches the light.
+     Scoped to pages outside CLI mode.
+     ============================================================================ */
+  :root:not([data-mode="cli"]) {
+    --blur: blur(28px) saturate(185%);
+    --blur-strong: blur(44px) saturate(190%);
+    --blur-soft: blur(14px) saturate(160%);
+    --glass-tint: rgba(255, 255, 255, .34);
+    --glass-tint-strong: rgba(255, 255, 255, .6);
+    --sheen: linear-gradient(118deg, rgba(255, 255, 255, .6) 0%, rgba(255, 255, 255, .12) 30%, rgba(255, 255, 255, 0) 55%);
+    --rim: linear-gradient(135deg, rgba(255, 255, 255, .98) 0%, rgba(255, 255, 255, .25) 32%, rgba(255, 255, 255, .04) 58%, rgba(255, 255, 255, .75) 100%);
+    --glass-fill: var(--sheen), var(--noise), linear-gradient(var(--glass-tint), var(--glass-tint));
+    --glass-fill-strong: var(--sheen), var(--noise), linear-gradient(var(--glass-tint-strong), var(--glass-tint-strong));
+    --orb-1: rgba(99, 102, 241, .42);
+    --orb-2: rgba(56, 189, 248, .34);
+    --orb-3: rgba(244, 114, 182, .30);
+    --orb-4: rgba(251, 191, 36, .24);
+    --orb-5: rgba(52, 211, 153, .22);
+  }
+  :root[data-theme="dark"]:not([data-mode="cli"]) {
+    --glass-tint: rgba(28, 26, 36, .4);
+    --glass-tint-strong: rgba(36, 34, 46, .62);
+    --sheen: linear-gradient(118deg, rgba(255, 255, 255, .12) 0%, rgba(255, 255, 255, .02) 30%, rgba(255, 255, 255, 0) 55%);
+    --rim: linear-gradient(135deg, rgba(255, 255, 255, .34) 0%, rgba(255, 255, 255, .06) 32%, rgba(255, 255, 255, .02) 58%, rgba(255, 255, 255, .18) 100%);
+    --orb-1: rgba(99, 102, 241, .4);
+    --orb-2: rgba(14, 165, 233, .22);
+    --orb-3: rgba(217, 70, 239, .2);
+    --orb-4: rgba(245, 158, 11, .12);
+    --orb-5: rgba(16, 185, 129, .12);
+  }
+
+  /* Wallpaper: more colour, so the glass has something to frost */
+  html:not([data-mode="cli"]) body::before {
+    background:
+      radial-gradient(42vmax 38vmax at 4% 10%, var(--orb-1), transparent 70%),
+      radial-gradient(38vmax 34vmax at 98% 6%, var(--orb-2), transparent 70%),
+      radial-gradient(44vmax 36vmax at 84% 96%, var(--orb-3), transparent 70%),
+      radial-gradient(34vmax 30vmax at 14% 98%, var(--orb-4), transparent 70%),
+      radial-gradient(30vmax 26vmax at 52% 46%, var(--orb-5), transparent 72%);
+  }
+
+  /* Panes: sidebar and preview panel */
+  html:not([data-mode="cli"]) .sidebar {
+    background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    box-shadow: var(--lift);
+  }
+  html:not([data-mode="cli"]) .panel {
+    background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+  }
+  @media (min-width: 861px) {
+    html:not([data-mode="cli"]) .sidebar { position: relative; margin: 10px 0 10px 10px; border-radius: 22px; border-right: 0; }
+    html:not([data-mode="cli"]) .panel { margin: 10px 10px 10px 0; border-radius: 22px; border-left: 0; }
+    html:not([data-mode="cli"]) .panel-stage { border-radius: 16px; }
+  }
+
+  /* Gradient rims: a bright edge at the top left, fading out across the pane */
+  html:not([data-mode="cli"]) .sidebar::before,
+  html:not([data-mode="cli"]) .topbar::before,
+  html:not([data-mode="cli"]) .composer::before,
+  html:not([data-mode="cli"]) .panel::before {
+    content: ""; position: absolute; inset: 0; z-index: 3; padding: 1px;
+    border-radius: inherit; background: var(--rim); pointer-events: none;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+  }
+
+  /* Header: a glass bar that the chat scrolls beneath */
+  html:not([data-mode="cli"]) .topbar {
+    position: absolute; top: 10px; left: 10px; right: 10px; z-index: 6;
+    height: 52px; padding: 0 12px 0 14px; border: 0; border-radius: 18px;
+    background: var(--glass-fill-strong);
+    -webkit-backdrop-filter: var(--blur-strong); backdrop-filter: var(--blur-strong);
+    box-shadow: var(--lift);
+  }
+  html:not([data-mode="cli"]) .chat { padding-top: calc(74px + env(safe-area-inset-top, 0px)); }
+  html:not([data-mode="cli"]) .col { padding-top: 16px; }
+  html:not([data-mode="cli"]) .pin-bar { margin-top: 62px; }
+  html:not([data-mode="cli"]) .main:has(.pin-bar:not([hidden])) .chat { padding-top: 14px; }
+
+  /* Composer and flyouts */
+  html:not([data-mode="cli"]) .composer {
+    background: var(--glass-fill-strong);
+    -webkit-backdrop-filter: var(--blur-strong); backdrop-filter: var(--blur-strong);
+    box-shadow: var(--flyout);
+  }
+  html:not([data-mode="cli"]) .popover,
+  html:not([data-mode="cli"]) .menu-pop,
+  html:not([data-mode="cli"]) .slash-pop {
+    background: var(--glass-fill-strong);
+    -webkit-backdrop-filter: var(--blur-strong); backdrop-filter: var(--blur-strong);
+  }
+  html:not([data-mode="cli"]) .jump-latest,
+  html:not([data-mode="cli"]) .speaking { background: var(--glass-fill-strong); }
+  html:not([data-mode="cli"]) dialog.sheet {
+    background: var(--glass-fill-strong);
+    -webkit-backdrop-filter: var(--blur-strong); backdrop-filter: var(--blur-strong);
+  }
+
+  /* Navigation: frosted pills, with a lit selected item */
+  html:not([data-mode="cli"]) .side-tabs { background: var(--glass-tint); border: 1px solid var(--glass-line); }
+  html:not([data-mode="cli"]) .side-tab.on { background: var(--glass-fill-strong); }
+  html:not([data-mode="cli"]) .search { background: var(--glass-tint); border: 1px solid var(--divider); }
+  html:not([data-mode="cli"]) .item:hover { background: var(--glass-tint-strong); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+  html:not([data-mode="cli"]) .item.active { background: var(--glass-fill-strong); box-shadow: var(--lift); }
+  html:not([data-mode="cli"]) .frow:hover { background: var(--glass-tint-strong); }
+  html:not([data-mode="cli"]) .new-btn {
+    background: var(--sheen), linear-gradient(180deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, 0)), var(--accent);
+  }
+  html:not([data-mode="cli"]) .textbtn { background: var(--glass-fill-strong); border: 1px solid var(--glass-line); }
+  html:not([data-mode="cli"]) .textbtn:hover { border-color: rgba(var(--accent-rgb), .4); }
+
+  /* Cards, bubbles and code: glass with a light blur, cheap enough for long chats */
+  html:not([data-mode="cli"]) .suggest button {
+    background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--blur-soft); backdrop-filter: var(--blur-soft);
+    border: 1px solid var(--glass-line);
+  }
+  html:not([data-mode="cli"]) .suggest button:hover { background: var(--glass-fill-strong); }
+  html:not([data-mode="cli"]) .msg.user .bubble {
+    background: var(--sheen), linear-gradient(rgba(var(--accent-rgb), .18), rgba(var(--accent-rgb), .18));
+    -webkit-backdrop-filter: var(--blur-soft); backdrop-filter: var(--blur-soft);
+    border: 1px solid rgba(var(--accent-rgb), .3);
+  }
+  html:not([data-mode="cli"]) .file-card {
+    background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--blur-soft); backdrop-filter: var(--blur-soft);
+  }
+  html:not([data-mode="cli"]) .code {
+    background: var(--glass-fill-strong);
+    -webkit-backdrop-filter: var(--blur-soft); backdrop-filter: var(--blur-soft);
+  }
+
+  /* Older browsers without backdrop blur get solid panes; so do people who ask for less transparency */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root:not([data-mode="cli"]) { --glass-tint: #ffffff; --glass-tint-strong: #ffffff; --sheen: linear-gradient(transparent, transparent); }
+    :root[data-theme="dark"]:not([data-mode="cli"]) { --glass-tint: #1f1d25; --glass-tint-strong: #22202a; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root:not([data-mode="cli"]) { --blur: blur(0px); --blur-strong: blur(0px); --blur-soft: blur(0px); --glass-tint: #ffffff; --glass-tint-strong: #ffffff; --sheen: linear-gradient(transparent, transparent); }
+    :root[data-theme="dark"]:not([data-mode="cli"]) { --glass-tint: #1f1d25; --glass-tint-strong: #22202a; }
+  }
+
+  /* On phones the drawer and the preview sheet cover the chat, so they take a denser glass */
+  @media (max-width: 860px) {
+    html:not([data-mode="cli"]) .sidebar,
+    html:not([data-mode="cli"]) .panel { background: var(--glass-fill-strong); }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -2794,9 +3149,10 @@ function fileCardHTML(name, text, lang, highlighted) {
   const lines = text.replace(/\n$/, '').split('\n').length;
   const size = fmtSize(new Blob([text]).size);
   const kind = kindOf(name, lang);
-  const preview = (kind === 'html' || kind === 'svg')
-    ? `<button data-act="fpreview" data-fid="${id}">Preview</button>`
-    : kind === 'js' ? `<button data-act="fpreview" data-fid="${id}">Run</button>` : '';
+  /* Every file gets a preview: pages render, scripts run, and other files open in the Code view. */
+  const preview = kind === 'js'
+    ? `<button data-act="fpreview" data-fid="${id}">Run</button>`
+    : `<button data-act="fpreview" data-fid="${id}">Preview</button>`;
   return `<div class="file-card">
       <div class="file-badge">${esc(ext)}</div>
       <div class="file-meta">
@@ -2909,6 +3265,11 @@ function showArtifact(it) {
   panelEl.root.hidden = false;
   renderPanel();
 }
+/* Source view: the file's text, highlighted by its extension when highlight.js knows the language. */
+function setSource(it) {
+  const ext = (it.name.split('.').pop() || '').toLowerCase();
+  panelEl.src.innerHTML = `<code class="hljs">${highlightCode(it.text, ext)}</code>`;
+}
 function renderPanel() {
   const it = activeItem();
   if (!it) { closePanel(); return; }
@@ -2916,7 +3277,7 @@ function renderPanel() {
   const view = isCode ? 'code' : panel.view;
   panelEl.kind.textContent = isCode ? (it.name.split('.').pop() || 'CODE').toUpperCase() : it.kind.toUpperCase();
   panelEl.name.textContent = it.name;
-  panelEl.src.textContent = it.text;
+  setSource(it);
   panelEl.tabs.innerHTML = panel.items.map(x =>
     `<button class="panel-tab${x.id === it.id ? ' on' : ''}" data-pid="${x.id}" title="${esc(x.name)}">${esc(x.name)}</button>`).join('');
   panelEl.tabs.hidden = panel.items.length < 2;
@@ -3098,7 +3459,7 @@ function liveSync(msg, force) {
     const now = Date.now();
     if (!force && now - known.ts < 900) continue;
     known.text = b.code; known.ts = now;
-    if (panel.activeId === known.id) { panelEl.src.textContent = b.code; loadFrame(known); }
+    if (panel.activeId === known.id) { setSource(known); loadFrame(known); }
   }
 }
 function openPreview(name, text, allowCode) {
@@ -3427,7 +3788,7 @@ els.col.addEventListener('click', async e => {
 
   if (act === 'pin' && m) { togglePin(m); return; }
   if (act === 'shuffle') { SUGGESTIONS = shuffled(SUGGESTION_POOL).slice(0, 4); return renderAll(false); }
-  if (act === 'fpreview' && fileStore.has(btn.dataset.fid)) openPreview(fileStore.get(btn.dataset.fid).name, fileStore.get(btn.dataset.fid).text);
+  if (act === 'fpreview' && fileStore.has(btn.dataset.fid)) { const f = fileStore.get(btn.dataset.fid); openPreview(f.name, f.text, true); }
   if (act === 'cpreview' || act === 'crun') previewCodeBlock(btn, btn.closest('.code').querySelector('.code-head span').textContent.trim());
   if (act === 'up' || act === 'down') {
     if (!m) return;
