@@ -2415,6 +2415,25 @@ html:not([data-mode="cli"]) .toast { background: var(--text); color: var(--bg); 
 html:not([data-mode="cli"]) .pal-item.sel { background: var(--accent-soft); box-shadow: none; }
 html:not([data-mode="cli"]) .pal-input { background: transparent; border-bottom: 1px solid var(--border); }
 
+/* Quiet, stable streaming affordance and reasoning disclosure */
+html:not([data-mode="cli"]) .typing { display: inline-flex; align-items: center; gap: 10px; min-height: 28px; color: var(--muted); }
+html:not([data-mode="cli"]) .typing .tlabel { color: var(--text-2); font-size: 13px; font-weight: 500; letter-spacing: 0; animation: none; }
+html:not([data-mode="cli"]) .typing .torb { position: relative; display: inline-block; width: 16px; height: 16px; flex: 0 0 16px; }
+html:not([data-mode="cli"]) .typing .torb i { position: absolute; inset: 5px; width: auto; height: auto; border-radius: 50%; background: var(--accent); animation: volt-core 2s ease-in-out infinite; }
+html:not([data-mode="cli"]) .typing .torb b { position: absolute; inset: 1px; border: 1px solid rgba(var(--accent-rgb), .55); border-radius: 50%; animation: volt-ring 2s ease-out infinite; }
+html:not([data-mode="cli"]) .typing .tdots { display: inline-flex; align-items: center; gap: 3px; }
+html:not([data-mode="cli"]) .typing .tdots i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .3; animation: volt-dot 1.2s ease-in-out infinite; }
+html:not([data-mode="cli"]) .typing .tdots i:nth-child(2) { animation-delay: .16s; }
+html:not([data-mode="cli"]) .typing .tdots i:nth-child(3) { animation-delay: .32s; }
+@keyframes volt-core { 0%, 100% { transform: scale(.82); opacity: .75; } 50% { transform: scale(1); opacity: 1; } }
+@keyframes volt-ring { 0% { transform: scale(.55); opacity: .7; } 75%, 100% { transform: scale(1.55); opacity: 0; } }
+@keyframes volt-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .3; } 30% { transform: translateY(-2px); opacity: .8; } }
+html:not([data-mode="cli"]) details.think { overflow: clip; border-radius: 10px; }
+html:not([data-mode="cli"]) details.think > div { overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-mode="cli"]) .typing * { animation: none !important; }
+}
+
 /* Artifact preview: split-screen workspace */
 html:not([data-mode="cli"]) .panel { background: var(--bg); border-left: 1px solid var(--border); -webkit-backdrop-filter: none; backdrop-filter: none; }
 html:not([data-mode="cli"]) .panel-head { background: var(--bg); border-bottom: 1px solid var(--border); }
@@ -2888,7 +2907,7 @@ html:not([data-mode="cli"]) .pj-chip:hover { color: var(--text); border-color: r
                 <span>Thinking</span>
                 <span class="switch"><input type="checkbox" id="thinkToggle" /><span class="slider"></span></span>
               </label>
-              <label class="think-toggle code-toggle" title="Code mode: Qwen coding models and a coding focus">
+              <label class="think-toggle code-toggle" title="Code mode: coding-focused models across providers">
                 <span>Code</span>
                 <span class="switch"><input type="checkbox" id="codeToggle" /><span class="slider"></span></span>
               </label>
@@ -2990,7 +3009,7 @@ html:not([data-mode="cli"]) .pj-chip:hover { color: var(--text); border-color: r
       <div class="set-row"><span>Creativity<span class="sub">Low is focused, high is exploratory</span></span>
         <span style="display:inline-flex;align-items:center;gap:10px"><input type="range" id="setTemp" min="0" max="1.5" step="0.1" /><b class="set-num" id="tempVal">1.0</b></span>
       </div>
-      <div class="set-row"><span>Code mode<span class="sub">Qwen models and a coding focus</span></span>
+      <div class="set-row"><span>Code mode<span class="sub">Coding-focused models across providers</span></span>
         <span class="switch"><input type="checkbox" id="setCode" /><span class="slider"></span></span>
       </div>
       <div class="set-row"><span>Shakespearean English<span class="sub">Volt answers in the style of Shakespeare</span></span>
@@ -3239,7 +3258,7 @@ const CATION_MODEL = { group: 'Agents', id: CATION_ID, name: 'Cation (MANEX)' };
 
 function groupForModel(m) {
   const s = (m.id + ' ' + (m.name || '')).toLowerCase();
-  if (/coder|code|devstral|codestral/.test(s)) return 'Coding';
+  if (/coder|code|devstral|codestral|flint|laguna|ernie.*flash|nemotron.*(ultra|lightning)/.test(s)) return 'Coding';
   if (/r1|reason|thinking|gpt-oss|o1|o3|qwq/.test(s)) return 'Reasoning & thinking';
   return 'General';
 }
@@ -3313,28 +3332,32 @@ function webllmSSEResponse(id, messages, signal) {
   return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
 }
 
-/* Qwen models for coding. They are only listed while Code mode is on. */
-const QWEN_CODE_MODELS = [
-  { group: 'Kilo (code mode)', id: 'kilo-auto/free', name: 'Kilo Auto (Free, keyless)' },
-  { group: 'Kilo (code mode)', id: 'poolside/laguna-s-2.1', name: 'Poolside Laguna S 2.1 (Kilo Gateway)' },
+/* Curated, no-cost coding models. Cloud entries appear only while OpenRouter lists them. */
+const CURATED_CODE_MODELS = [
+  { group: 'Poolside (code mode)', id: 'poolside/laguna-s-2.1:free', name: 'Poolside Laguna S 2.1 (Free, legacy)' },
+  { group: 'Qwen (code mode)', id: 'qwen/qwen3.6-plus:free', name: 'Qwen3.6 Plus (Free)' },
   { group: 'Qwen (code mode)', id: 'qwen/qwen3-coder:free', name: 'Qwen3 Coder 480B (Free)' },
   { group: 'Qwen (code mode)', id: 'qwen/qwen3-next-80b-a3b-instruct:free', name: 'Qwen3 Next 80B (Free)' },
+  { group: 'Recursive (code mode)', id: 'recursive/flint-v1.0:free', name: 'Recursive Flint (Free)' },
+  { group: 'Baidu (code mode)', id: 'baidu/ernie-5.5-flash-preview:free', name: 'Baidu ERNIE 5.5 Flash (Free)' },
+  { group: 'NVIDIA (code mode)', id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'NVIDIA Nemotron 3 Ultra (Free)' },
+  { group: 'NVIDIA (code mode)', id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)' },
   { group: 'Qwen (in browser)', id: 'webllm:qwen2.5-coder-1.5b', name: 'Qwen2.5 Coder 1.5B (in browser, WebGPU)' },
   { group: 'Qwen (in browser)', id: 'webllm:qwen2.5-coder-0.5b', name: 'Qwen2.5 Coder 0.5B (in browser, WebGPU)' }
 ];
-const QWEN_IDS = QWEN_CODE_MODELS.map(m => m.id);
+const CURATED_CODE_IDS = CURATED_CODE_MODELS.map(m => m.id);
 let freeCatalog = [];
 let liveOpenRouterIds = null;   /* null until the OpenRouter catalogue loads */   /* every free model from OpenRouter, after the blocklist */
-const isCodingModel = m => /coder|code|qwen|codestral|devstral|starcoder|codellama/i.test(m.id + ' ' + m.name);
+const isCodingModel = m => /coder|code|qwen|codestral|devstral|starcoder|codellama|flint|laguna|ernie.*flash|nemotron.*(ultra|lightning)/i.test(m.id + ' ' + m.name);
 function visibleModels() {
   if (!prefs.codeMode) return freeCatalog;
-  const stillListed = QWEN_CODE_MODELS.filter(m => m.id.startsWith('webllm:') || m.group.startsWith('Kilo') || !liveOpenRouterIds || liveOpenRouterIds.has(m.id));
+  const stillListed = CURATED_CODE_MODELS.filter(m => m.id.startsWith('webllm:') || !liveOpenRouterIds || liveOpenRouterIds.has(m.id));
   return [...freeCatalog.filter(isCodingModel), ...stillListed];
 }
 function syncCodeModels() {
   MODELS.length = 0;
   MODELS.push(AUTO_MODEL, CATION_MODEL, ...visibleModels());
-  if (!prefs.codeMode && QWEN_IDS.includes(prefs.model)) { prefs.model = AUTO_MODEL.id; persist(); }
+  if (!prefs.codeMode && CURATED_CODE_IDS.includes(prefs.model)) { prefs.model = AUTO_MODEL.id; persist(); }
   buildModelSelect();
 }
 function setCodeMode(on) {
@@ -3344,7 +3367,7 @@ function setCodeMode(on) {
     prefs.badModels = (prefs.badModels || []).filter(id => !isCodingModel({ id, name: id }));
     if (!prefs.model || prefs.model === AUTO_MODEL.id) {
       const usable = visibleModels().filter(m => !m.id.startsWith('webllm:'));
-      const pick = usable.find(m => m.id === QWEN_CODE_MODELS[0].id) || usable[0];
+      const pick = usable.find(m => m.id === 'qwen/qwen3.6-plus:free') || usable.find(m => m.id === 'qwen/qwen3-coder:free') || usable.find(m => m.id === 'recursive/flint-v1.0:free') || usable[0];
       prefs.model = pick ? pick.id : AUTO_MODEL.id;
     }
   }
@@ -3354,7 +3377,7 @@ function setCodeMode(on) {
   $('setCode').checked = prefs.codeMode === true;
   syncCodeToggle();
   renderStatePills();
-  toast(prefs.codeMode ? 'Code mode on: Qwen models and a coding focus.' : 'Code mode off.');
+  toast(prefs.codeMode ? 'Code mode on: coding models across providers.' : 'Code mode off.');
 }
 
 async function loadFreeModels() {
@@ -3364,7 +3387,7 @@ async function loadFreeModels() {
     const { data } = await r.json();
     liveOpenRouterIds = new Set(data.map(m => m.id));
     const free = data
-      .filter(m => m.id.endsWith(':free') && !isBlockedModel(m.id) && !QWEN_IDS.includes(m.id))
+      .filter(m => m.id.endsWith(':free') && !isBlockedModel(m.id) && !CURATED_CODE_IDS.includes(m.id))
       .map(m => ({ group: groupForModel(m), id: m.id, name: (m.name || m.id).replace(/^[^:]*:\s*/, '') }))
       .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
     if (free.length) freeCatalog = free;
@@ -3612,7 +3635,7 @@ const CLI_HELP = [
   [':thinking on|off', 'Turn reasoning mode on or off.'],
   [':web on|off', 'Web search is always on; this just reports it.'],
   [':shakespeare on|off', 'Answer in Shakespearean English or plain English.'],
-  [':code on|off', 'Code mode: Qwen coding models and a coding focus.'],
+  [':code on|off', 'Code mode: coding-focused models across providers.'],
   [':pin [number]', 'Pin the last answer, or a message by number.'],
   [':pins', 'List pinned messages in this chat.'],
   [':unpin <number>', 'Unpin a message from the :pins list.'],
@@ -4425,17 +4448,12 @@ function bodyHTML(m) {
   }
   if (src.reasoning && prefs.showReasoning !== false) {
     const secs = src.thinkMs >= 1000 ? ` \u00b7 ${(src.thinkMs / 1000).toFixed(1)}s` : '';
-    h += `<details class="think"${src.content ? '' : ' open'}><summary>Reasoning${secs}</summary><div>${esc(src.reasoning)}</div></details>`;
+    const reasoningOpen = src.reasoningOpen === undefined ? !src.content : src.reasoningOpen;
+    h += `<details class="think"${reasoningOpen ? ' open' : ''}><summary>Reasoning${secs}</summary><div>${esc(src.reasoning)}</div></details>`;
   }
   if (src.content) h += md(src.content);
   else if (!src.error) {
-    /* Negative delays tie each dot to the wall clock, so re-rendering the body does not restart the bounce. */
-    const t = Date.now();
-    const dotStyle = k => `display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.3;animation:voltdot 1.2s ease-in-out infinite;animation-delay:-${(t + k * 160) % 1200}ms`;
-    const dots = [0, 1, 2].map(k => `<i style="${dotStyle(k)}"></i>`).join('');
-    /* Each letter and the pulse ring get a clock-based delay, so re-rendering keeps the motion smooth. */
-    const word = [...'Thinking'].map((ch, k) => `<span class="tl" style="animation-delay:-${(t + k * 90) % 1400}ms">${ch}</span>`).join('');
-    h += `<span class="typing" role="status" aria-label="Volt is thinking"><span class="tlabel">${word}</span><span class="tdots">${dots}</span></span>`;
+    h += `<span class="typing" role="status" aria-label="Volt is thinking"><span class="torb" aria-hidden="true"><i></i><b></b></span><span class="tlabel">Thinking</span><span class="tdots" aria-hidden="true"><i></i><i></i><i></i></span></span>`;
   }
   return h;
 }
@@ -4553,6 +4571,15 @@ els.files.addEventListener('click', async e => {
 });
 
 /* Event delegation for the chat column */
+els.col.addEventListener('toggle', e => {
+  const details = e.target;
+  if (!details.matches?.('details.think')) return;
+  const msgEl = details.closest('.msg.assistant');
+  const m = msgEl && current()?.messages[+msgEl.dataset.index];
+  if (!m) return;
+  const visible = m.view >= 0 && m.alts?.[m.view] ? m.alts[m.view] : m;
+  visible.reasoningOpen = details.open;
+}, true);
 els.col.addEventListener('click', async e => {
   if (e.target.closest('[data-pclear]')) { setActiveProj(null); return; }
   const pre = e.target.closest('[data-prefill]');
@@ -4820,7 +4847,7 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
       body: JSON.stringify({
         model: useModel,
         stream: true,
-        reasoning: { effort: prefs.thinking === true ? 'high' : 'low' },
+        reasoning: prefs.thinking === true ? { effort: 'high' } : { enabled: false },
         ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
         messages: reqMessages
       }),
@@ -4843,8 +4870,31 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const paint = () => {
     frame = 0;
     if (!bodyEl?.isConnected) return;
+    if (opts.alt && (assistantMsg.view < 0 || assistantMsg.alts?.[assistantMsg.view] !== tgt)) return;
     try {
-      bodyEl.innerHTML = opts.render ? opts.render() : bodyHTML(assistantMsg);
+      const oldThink = bodyEl.querySelector('details.think');
+      const reasoningOpen = oldThink ? oldThink.open : undefined;
+      const reasoningScroll = oldThink?.querySelector('div')?.scrollTop || 0;
+      if (reasoningOpen !== undefined) tgt.reasoningOpen = reasoningOpen;
+      const nextBody = document.createElement('div');
+      nextBody.innerHTML = opts.render ? opts.render() : bodyHTML(assistantMsg);
+      const nextThink = nextBody.querySelector('details.think');
+      if (oldThink && nextThink) {
+        const oldSummary = oldThink.querySelector('summary');
+        const nextSummary = nextThink.querySelector('summary');
+        const oldContent = oldThink.querySelector('div');
+        const nextContent = nextThink.querySelector('div');
+        if (oldSummary && nextSummary) oldSummary.innerHTML = nextSummary.innerHTML;
+        if (oldContent && nextContent) oldContent.textContent = nextContent.textContent;
+        oldThink.open = reasoningOpen;
+        if (oldContent) oldContent.scrollTop = reasoningScroll;
+        if (!tgt.content) {
+          liveSync(tgt);
+          return;
+        }
+        nextThink.replaceWith(oldThink);
+      }
+      bodyEl.replaceChildren(...nextBody.childNodes);
       renderMath(bodyEl);
       const nearBottom = els.chat.scrollHeight - els.chat.scrollTop - els.chat.clientHeight < 120;
       if (nearBottom) els.chat.scrollTop = els.chat.scrollHeight;
@@ -4863,7 +4913,10 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
     let j; try { j = JSON.parse(data); } catch { continue; }
     if (j.error) throw streamError(j.error.message || 'The model returned an error.');
     const d = j.choices?.[0]?.delta || {};
-    const r = d.reasoning ?? d.reasoning_content;
+    let r = [d.reasoning, d.reasoning_content].find(x => typeof x === 'string' && x.length) || '';
+    if (!r && Array.isArray(d.reasoning_details)) {
+      r = d.reasoning_details.map(x => typeof x === 'string' ? x : (x?.text || x?.content || x?.reasoning || '')).join('');
+    }
     if (r) tgt.reasoning += r;
     if (d.content) {
       if (tgt.reasoning && tgt.thinkMs === undefined) tgt.thinkMs = Date.now() - started;
