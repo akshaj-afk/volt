@@ -3411,8 +3411,8 @@ const ICONS = {
 
 // Fallback list. On load, Volt replaces this with the live list of free models from OpenRouter.
 const AUTO_MODEL = { group: 'General', id: 'openrouter/free', name: 'Auto' };
-/* Kilo's anonymous free-model endpoint; the paid API-key endpoint is not used here. */
-const KILO_GATEWAY_BASE = 'https://api.kilo.ai/api/gateway';
+/* Route Kilo requests through Volt's same-origin function to avoid browser CORS failures. */
+const KILO_GATEWAY_BASE = '/api/kilo?path=';
 const KILO_AUTO_MODEL = {
   group: 'Kilo Gateway - Free (providers may train on prompts)',
   id: 'kilo:kilo-auto/free',
@@ -3561,7 +3561,7 @@ async function loadFreeModels() {
 }
 async function loadKiloFreeModels() {
   try {
-    const r = await fetch(KILO_GATEWAY_BASE + '/models');
+    const r = await fetch(KILO_GATEWAY_BASE + 'models');
     if (!r.ok) throw new Error('Kilo model catalog unavailable');
     const { data } = await r.json();
     kiloFreeCatalog = (data || []).filter(m => m.isFree === true && m.id !== 'kilo-auto/free' && !/batch|embed|rerank|moderation|safety/i.test(m.id));
@@ -5227,8 +5227,8 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   } else if (WEBLLM_MODELS[useModel]) {
     res = webllmSSEResponse(useModel, reqMessages, ctrl.signal);
   } else if (useModel.startsWith('kilo:')) {
-    /* Kilo allows anonymous access to free models. Keep this a simple browser request. */
-    res = await fetch(KILO_GATEWAY_BASE + '/chat/completions', {
+    /* Volt's same-origin API route forwards only free-model requests to Kilo. */
+    res = await fetch(KILO_GATEWAY_BASE + 'chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
