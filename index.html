@@ -3458,7 +3458,7 @@ const NON_CHAT_MODEL = /safety|guard|moderat|classif|embed|rerank|whisper|speech
 function isBlockedModel(id) {
   const s = (id || '').toLowerCase();
   if (!s || s === AUTO_MODEL.id) return false;
-  return BLOCKED_MODEL_HINTS.some(h => s.includes(h)) || NON_CHAT_MODEL.test(s) || (prefs.badModels || []).includes(id);
+  return BLOCKED_MODEL_HINTS.some(h => s.includes(h)) || NON_CHAT_MODEL.test(s) || (!s.startsWith('kilo:') && (prefs.badModels || []).includes(id));
 }
 /* A reply that is only a safety label means the model answered as a classifier. */
 function looksLikeClassifier(text) {
@@ -5194,6 +5194,7 @@ function isTransientError(err) {
 function friendlyError(err, model) {
   if (err?.name === 'TypeError' && model?.startsWith('kilo:')) return `Could not connect to Kilo Gateway. Check your connection or try another model. (${err.message})`;
   if (err?.name === 'TypeError') return `Volt could not reach the server. Check your connection and try again. (${err.message})`;
+  if (err?.status === 404 && model?.startsWith('kilo:')) return 'Kilo Gateway could not be found at its route or model (404). If this keeps happening, check that api/kilo.js is deployed and that the Kilo model name is still current.';
   if (err?.status === 429 && model?.startsWith('kilo:')) return "Kilo Gateway's request limit is shared across models for your network. Wait a bit, then try again.";
   if (err?.status === 429 && model !== CATION_ID) return 'This model is rate-limited right now. Wait a minute, or pick another model.';
   return err?.message || 'Something went wrong. Please try again.';
@@ -5325,6 +5326,13 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
       }),
       signal: ctrl.signal
     });
+    /* If Kilo's route or model is not reachable, pause Kilo briefly and answer from the next provider. */
+    if (!res.ok && [404, 500, 502, 503, 504].includes(res.status) && !ctrl.signal.aborted) {
+      autoCooldown.set(useModel, Date.now() + AUTO_COOLDOWN_MS);
+      const pick = await autoChainFetch(reqMessages, ctrl);
+      res = pick.res;
+      tgt.model = pick.model;
+    }
   } else {
     res = await fetch('/api/chat', {
       method: 'POST',
@@ -5461,7 +5469,7 @@ async function runAssistant(assistantMsg, retried = false) {
       assistantMsg.error = true;
       assistantMsg.content = `**Error:** ${friendlyError(err, failed)}`;
       /* Only a model that is clearly gone is dropped for good. Rate limits and network hiccups are not its fault. */
-      const gone = err.permanent === true || err.status === 400 || err.status === 404;
+      const gone = err.permanent === true || ((err.status === 400 || err.status === 404) && !String(failed || '').startsWith('kilo:'));
       if (gone && failed && failed !== AUTO_MODEL.id && failed !== CATION_ID && failed !== prefs.customId) {
         prefs.badModels = [...new Set([...(prefs.badModels || []), failed])];
         dropBlockedModels();
@@ -6764,7 +6772,7 @@ var editingNativePath = null;
 var editingFolderAction = 'remove';
 /* Projects are a signed-in feature. Signed out, they are hidden and not used; nothing is deleted. */
 function signedIn() { const s = session(); return !!(s && s.token); }
-function visibleProjects() { return signedIn() ? visibleProjects() : []; }
+function visibleProjects() { return signedIn() ? (Array.isArray(prefs.projects) ? prefs.projects : []) : []; }
 function activeProjId() {
   const id = prefs.activeProj;
   return id && visibleProjects().some(p => p.id === id) ? id : undefined;
