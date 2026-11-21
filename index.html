@@ -5236,7 +5236,8 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
       ? { role, content: [{ type: 'text', text: content }, ...images.map(url => ({ type: 'image_url', image_url: { url } }))] }
       : { role, content });
 
-  const useModel = opts.model || oneShotModel || selectedModel();
+  /* Code mode runs on Kilo: Auto is sent straight to Kilo's auto model instead of the general chain. */
+  const useModel = opts.model || oneShotModel || (prefs.codeMode && selectedModel() === AUTO_MODEL.id ? KILO_AUTO_MODEL.id : selectedModel());
   oneShotModel = null;
   tgt.model = useModel;
   const ctrl = new AbortController();
