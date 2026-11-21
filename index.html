@@ -3411,7 +3411,8 @@ const ICONS = {
 
 // Fallback list. On load, Volt replaces this with the live list of free models from OpenRouter.
 const AUTO_MODEL = { group: 'General', id: 'openrouter/free', name: 'Auto' };
-const KILO_GATEWAY_BASE = 'https://ai-gateway.kilo.ai/api/v1';
+/* Kilo's anonymous free-model endpoint; the paid API-key endpoint is not used here. */
+const KILO_GATEWAY_BASE = 'https://api.kilo.ai/api/gateway';
 const KILO_AUTO_MODEL = {
   group: 'Kilo Gateway - Free (providers may train on prompts)',
   id: 'kilo:kilo-auto/free',
@@ -5166,6 +5167,7 @@ function isTransientError(err) {
   return err.status === 408 || err.status === 429 || err.status >= 500;
 }
 function friendlyError(err, model) {
+  if (err?.name === 'TypeError' && model?.startsWith('kilo:')) return `Could not connect to Kilo Gateway. Check your connection or try another free model. (${err.message})`;
   if (err?.name === 'TypeError') return `Volt could not reach the server. Check your connection and try again. (${err.message})`;
   if (err?.status === 429 && model?.startsWith('kilo:')) return "Kilo Gateway's free request limit is shared across models for your network. Wait a bit, then try again.";
   if (err?.status === 429 && model !== CATION_ID) return 'This model is rate-limited right now. Wait a minute, or pick another model.';
@@ -5225,10 +5227,10 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   } else if (WEBLLM_MODELS[useModel]) {
     res = webllmSSEResponse(useModel, reqMessages, ctrl.signal);
   } else if (useModel.startsWith('kilo:')) {
-    /* Kilo's free gateway models are keyless; code mode explicitly requests code routing. */
+    /* Kilo allows anonymous access to free models. Keep this a simple browser request. */
     res = await fetch(KILO_GATEWAY_BASE + '/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-kilocode-mode': 'code' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: useModel.slice('kilo:'.length),
         stream: true,
