@@ -2833,6 +2833,8 @@ html:not([data-mode="cli"]) .orb-satellite { filter: drop-shadow(0 0 3px rgba(14
 html:not([data-mode="cli"]) .orb-core { transform-box: fill-box; transform-origin: center; animation: volt-core-breathe 5s ease-in-out infinite; }
 @keyframes volt-orbit { to { transform: rotate(326deg); } }
 @keyframes volt-orb-hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes volt-strike { 0%, 58%, 66%, 100% { opacity: 1; filter: drop-shadow(0 0 2px rgba(253,230,138,.6)); } 60%, 64% { opacity: .15; filter: none; } 62% { opacity: 1; filter: drop-shadow(0 0 10px rgba(253,230,138,1)); } }
+html:not([data-mode="cli"]) .orb-mark { transform-box: fill-box; transform-origin: center; animation: volt-strike 4s linear infinite; }
 @keyframes volt-aura { 0%, 100% { opacity: .58; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.05); } }
 @keyframes volt-core-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
 html:not([data-mode="cli"]) .home h1 { font-size: clamp(34px, 4.4vw, 48px); line-height: 1.08; letter-spacing: -.035em; }
@@ -4699,25 +4701,29 @@ function renderAll(scrollBottom = true) {
       <div class="home-hero">
         <svg class="home-orb" viewBox="0 0 72 72" aria-hidden="true">
           <defs>
-            <radialGradient id="voltOrbFill" cx="32%" cy="24%" r="82%">
-              <stop offset="0" stop-color="#d9f5ff"/>
-              <stop offset=".3" stop-color="#6cbcff"/>
-              <stop offset=".72" stop-color="#3476e8"/>
-              <stop offset="1" stop-color="#14264e"/>
+            <radialGradient id="voltOrbFill" cx="50%" cy="40%" r="75%">
+              <stop offset="0" stop-color="#2b3d6b"/>
+              <stop offset=".6" stop-color="#121a33"/>
+              <stop offset="1" stop-color="#070b18"/>
             </radialGradient>
             <linearGradient id="voltOrbRing" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#8fe7ff" stop-opacity=".08"/>
-              <stop offset=".48" stop-color="#7abaff" stop-opacity=".95"/>
-              <stop offset="1" stop-color="#8fe7ff" stop-opacity=".08"/>
+              <stop offset="0" stop-color="#fde68a" stop-opacity=".05"/>
+              <stop offset=".5" stop-color="#fbbf24" stop-opacity=".95"/>
+              <stop offset="1" stop-color="#fde68a" stop-opacity=".05"/>
+            </linearGradient>
+            <linearGradient id="voltBolt" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff"/>
+              <stop offset=".45" stop-color="#fde68a"/>
+              <stop offset="1" stop-color="#f59e0b"/>
             </linearGradient>
           </defs>
-          <circle class="orb-aura" cx="36" cy="36" r="28" fill="#579aff" fill-opacity=".08"/>
+          <circle class="orb-aura" cx="36" cy="36" r="28" fill="#fbbf24" fill-opacity=".10"/>
           <ellipse class="orb-orbit" cx="36" cy="36" rx="29" ry="12" fill="none" stroke="url(#voltOrbRing)" stroke-width="1.15" stroke-dasharray="76 110" stroke-linecap="round" transform="rotate(-34 36 36)"/>
-          <circle class="orb-satellite" cx="12.4" cy="21.8" r="2.1" fill="#a4eaff"/>
-          <circle cx="36" cy="36" r="22" fill="#101a30" fill-opacity=".55" stroke="#a9d9ff" stroke-opacity=".22" stroke-width=".8"/>
+          <circle class="orb-satellite" cx="12.4" cy="21.8" r="2" fill="#fde68a"/>
+          <circle cx="36" cy="36" r="22" fill="#0b1020" fill-opacity=".7" stroke="#fbbf24" stroke-opacity=".25" stroke-width=".8"/>
           <circle class="orb-core" cx="36" cy="36" r="18.5" fill="url(#voltOrbFill)"/>
-          <path class="orb-glint" d="M24 30.5C26.7 24.7 32 21.7 38.2 22.4" fill="none" stroke="#fff" stroke-opacity=".72" stroke-width="1.15" stroke-linecap="round"/>
-          <path class="orb-mark" d="M45.2 26.2 30 38.2c4.4-.8 7.1-1.8 11.9-4.5-3.5 6.1-7.3 9.5-15 12.5 7.7-.8 14.4-5.1 18.3-12.3" fill="none" stroke="#fff" stroke-opacity=".94" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="orb-glint" d="M26 22 L30 20" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.1" stroke-linecap="round"/>
+          <path class="orb-mark" d="M40.5 13.5 L25.5 38.5 H34.5 L30.5 58.5 L47.5 31.5 H38 L43.5 13.5 Z" fill="url(#voltBolt)" stroke="#fff" stroke-opacity=".55" stroke-width=".6" stroke-linejoin="round"/>
         </svg>
         <h1>${hp ? `How can I help you in <span class="pj-name">${esc(hp.name)}</span>?` : hello()}</h1>
         <p>${hp ? 'Chats here follow the instructions of this project.' : 'What are we working on today?'}</p>
@@ -5172,6 +5178,55 @@ function cationMessages(list) {
     .slice(-30);
 }
 
+/* Auto follows Quillo Pro's provider chain: Kilo auto first (fastest), then Qwen on OVHcloud
+   (no key needed, served through api/ovh.js), then OpenRouter via api/chat.js, which holds the key. */
+const OVH_GATEWAY_BASE = '/api/ovh?path=';
+const AUTO_CHAIN = [
+  { model: 'kilo:kilo-auto/free', url: KILO_GATEWAY_BASE + 'chat/completions', wire: 'kilo-auto/free', limit: 20000 },
+  { model: 'ovh:Qwen3.5-9B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.5-9B', limit: 45000 },
+  { model: 'ovh:Qwen3.6-27B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.6-27B', limit: 45000 },
+  { model: AUTO_MODEL.id, url: '/api/chat', wire: AUTO_MODEL.id, limit: 30000 }
+];
+/* Tries each provider in turn. A provider that errors, is rate-limited or sends no response
+   within its limit is skipped; the first one that answers is streamed. Returns the response
+   and the model that produced it. */
+async function autoChainFetch(reqMessages, parent) {
+  let last = null;
+  for (let i = 0; i < AUTO_CHAIN.length; i++) {
+    const p = AUTO_CHAIN[i];
+    if (parent.signal.aborted) throw new DOMException('Stopped', 'AbortError');
+    const attempt = new AbortController();
+    const onParentAbort = () => attempt.abort();
+    parent.signal.addEventListener('abort', onParentAbort);
+    const timer = setTimeout(() => attempt.abort(), p.limit);
+    try {
+      const body = {
+        model: p.wire,
+        stream: true,
+        reasoning: prefs.thinking === true ? { effort: 'high' } : { enabled: false },
+        ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
+        messages: reqMessages
+      };
+      const res = await fetch(p.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: attempt.signal
+      });
+      last = { res, model: p.model };
+      if (res.ok) return last;
+      if (res.status === 401 || res.status === 403 || i === AUTO_CHAIN.length - 1) return last;
+    } catch (err) {
+      if (parent.signal.aborted) throw err;
+      if (i === AUTO_CHAIN.length - 1) throw err;
+    } finally {
+      clearTimeout(timer);
+      parent.signal.removeEventListener('abort', onParentAbort);
+    }
+  }
+  return last;
+}
+
 async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const c = current();
   const tgt = opts.target || assistantMsg;
@@ -5194,7 +5249,11 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   // In-browser Qwen models run on this computer through WebLLM, with no server call.
   const reqMessages = [{ role: 'system', content: (opts.systemPrompt || buildSystemPrompt()) + webNote }, ...payloadMessages];
   let res;
-  if (useModel === CATION_ID) {
+  if (useModel === AUTO_MODEL.id) {
+    const pick = await autoChainFetch(reqMessages, ctrl);
+    res = pick.res;
+    tgt.model = pick.model;
+  } else if (useModel === CATION_ID) {
     /* Our own server route holds the Cation key and forwards the chat. */
     res = await fetch('/api/cation', {
       method: 'POST',
@@ -6189,7 +6248,8 @@ function openChat(id) {
   if (busy) abortCtrl?.abort();
   currentId = id;
   resetPanelFiles();
-  renderAll();
+  renderAll(false);
+  els.chat.scrollTop = 0;
   closeMobileSidebar();
 }
 function setSkill(id) {
@@ -7463,7 +7523,8 @@ buildModelSelect();
 renderAccount();
 loadFreeModels();
 renderStatePills();
-renderAll();
+renderAll(false);
+els.chat.scrollTop = 0;
 setSideTab(sideTab);
 autosize();
 updateJump();
