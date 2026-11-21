@@ -2771,6 +2771,7 @@ html:not([data-mode="cli"]) .proj-newchat { margin: 6px 10px 8px; width: calc(10
 html:not([data-mode="cli"]) .proj-newchat:hover { background: rgba(var(--accent-rgb), .18); }
 html:not([data-mode="cli"]) #projBtn { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-mode="cli"] #projBtn, [data-mode="cli"] #projList { display: none !important; }
+html.signed-out #navProjects, html.signed-out #projBtn, html.signed-out #projList { display: none !important; }
 
 
 /* v8: selectable projects */
@@ -3368,7 +3369,7 @@ Recent notes (2026, most recent source):
 function buildSystemPrompt() {
   let p = BASE_PROMPT;
   const activeChat = current();
-  const activeProject = activeChat && (prefs.projects || []).find(x => x.id === activeChat.projectId);
+  const activeProject = activeChat && visibleProjects().find(x => x.id === activeChat.projectId);
   const hasProjectFolder = !!(activeProject && activeProject.folderLinked);
   p += prefs.thinking === true
     ? `\n\nResponse mode: Thinking is ON. Reason carefully, work through problems step by step, and give thorough, detailed answers with full explanations and examples.`
@@ -3377,7 +3378,7 @@ function buildSystemPrompt() {
     ? `\n\nProject file edits: Change existing files with standard unified diffs in \`\`\`diff blocks, one patch covering the changed paths. Include exact \`--- a/path\` and \`+++ b/path\` headers, enough unchanged context to match safely, and only the changed lines. Do not output complete replacement copies of existing files. Add a new file only when the project truly needs one; put only that new file's complete contents in a separately named code block.`
     : `\n\nFiles: Whenever you write code, a script, markup, a config, or any data file, put its full contents in a fenced code block that names the file, for example \`\`\`python app.py, \`\`\`javascript utils.js, or \`\`\`markdown report.md. Every code block is saved as a file the user can download, so always give a real filename and always give complete, runnable contents.`;
   if (!hasProjectFolder) {
-    p += `\n\nInterfaces: When the user asks for a standalone app, interface, UI, mock-up, form, dashboard, page, animation, calculator, tool or game, build it as one complete self-contained HTML file (inline CSS and JS, no external assets unless requested) in a fenced \`\`\`html page-name.html block. The app previews live inside the chat window and can be downloaded. Keep it working on the first try: no placeholders or TODOs. Small interactive pieces belong inline in the chat.`;
+    p += `\n\nInterfaces: When the user asks for a standalone app, interface, UI, mock-up, form, dashboard, page, animation, calculator, tool or game, build it as one complete self-contained HTML file (inline CSS and JS, no external assets unless requested) in a fenced \`\`\`html page-name.html block. The app previews live inside the chat window and can be downloaded. Keep it working on the first try: no placeholders or TODOs. Small interactive pieces belong inline in the chat. If a page or app from this conversation already exists and the user asks for a change, return only the changed parts as a unified diff in a \`\`\`diff block with the exact file name, not the whole page again; send the whole file only when asked or when it is brand new.`;
   } else {
     p += `\n\nExisting project work takes priority over standalone artifact rules. The user is asking you to improve an existing project in the connected folder. Inspect the supplied path index and file contents, identify the real entry point and UI framework, and edit existing files in their current language and stack. Never replace the app with a standalone HTML demo or switch languages/frameworks. For Python apps, patch the existing Python code and its existing UI assets; emit HTML only if the app already embeds HTML or the user specifically requests a web page. For design requests, improve the actual screens, styles, themes, spacing, typography, colors, and layout in the existing UI. Respond with standard unified diffs only for existing files, using a \`\`\`diff block with exact paths, for example \`\`\`diff\ndiff --git a/main.py b/main.py\n--- a/main.py\n+++ b/main.py\n@@ -10,3 +10,4 @@\n context line\n-old line\n+improved line\n context line\n\`\`\`. Include enough context for Volt to verify the patch against the current file. Never paste a complete replacement copy of an existing file. Only create a new file if the requested improvement cannot reasonably be made by editing the existing project. If required source files are absent from the supplied snapshot, ask the user to select them instead of inventing a replacement app. The user applies edits with the Apply edits button.`;
   }
@@ -3387,7 +3388,7 @@ function buildSystemPrompt() {
   if (prefs.codeMode) {
     p += hasProjectFolder
       ? `\n\nCode mode is ON. Act as an expert software engineer and keep prose short. For this connected project, preserve the existing architecture and return context-checked unified diffs for existing files; do not paste full-file replacements.`
-      : `\n\nCode mode is ON. Act as an expert software engineer. Write complete, correct, runnable code with no placeholders. Put every file in its own fenced block with a real filename. Keep prose short: say what the code does, how to run it, and any important edge cases.`;
+      : `\n\nCode mode is ON. Act as an expert software engineer. Write correct, runnable code with no placeholders. Keep prose short: say what the code does, how to run it, and any important edge cases. Editing existing code: when the user asks to change a file that already appears in this conversation, do NOT rewrite the whole file. Return only the changed parts as a standard unified diff in a \`\`\`diff block with the exact file path (context lines, then -old and +new lines), so the user can apply the change. Write a complete file only when it is brand new or the user explicitly asks for the whole file. Never repeat unchanged code.`;
   }
   if (prefs.shakespeare === true) {
     p += `\n\nLanguage style: Reply in Shakespearean English. Use early-modern phrasing with thee, thou, thy, dost, hath and similar words, and a poetic, theatrical tone. Keep the content accurate and helpful. Code, commands, file names and links stay exactly as they are, and they are not translated.`;
@@ -3401,7 +3402,7 @@ function buildSystemPrompt() {
   if (mem.length) p += `\n\nRemembered facts about the user (use them naturally, never as a list):\n- ${mem.join('\n- ')}`;
   const skill = allSkills().find(s => s.id === (prefs.skill || 'none'));
   const pjc = current();
-  const pj = pjc ? (prefs.projects || []).find(x => x.id === pjc.projectId) : null;
+  const pj = pjc ? visibleProjects().find(x => x.id === pjc.projectId) : null;
   if (pj) p += `\n\nProject: ${pj.name}.` + (pj.instructions ? ` Project instructions (follow them in this chat): ${pj.instructions}` : '');
   if (skill && skill.prompt) p += `\n\nActive skill (${skill.name}): ${skill.prompt}`;
   const kb = KNOWLEDGE_BASE.trim();
@@ -3624,8 +3625,9 @@ const agentBridge = {
   }
 };
 let convos = JSON.parse(localStorage.getItem('volt_convos') || '[]');
+/* Every visit starts on the home page: no chat is open until the user picks or starts one. */
+let currentId = null;
 let sideTab = prefs.sideTab === 'files' ? 'files' : 'chats';
-let currentId = convos[0]?.id || null;
 let busy = false, abortCtrl = null, storageBytes = 0;
 let compareCtrls = [];
 
@@ -3684,7 +3686,7 @@ dbGet('convos').then(saved => {
   if (Array.isArray(saved)) { convos = saved; }
   else if (convos.length) { dbPut('convos', convos).catch(() => {}); }
   try { localStorage.removeItem('volt_convos'); } catch {}
-  if (!currentId || !convos.some(c => c.id === currentId)) currentId = convos[0]?.id || null;
+  if (currentId && !convos.some(c => c.id === currentId)) currentId = null;
   renderAll(false);
 }).catch(() => {});
 function current() { return convos.find(c => c.id === currentId); }
@@ -4040,7 +4042,7 @@ function fileCardHTML(name, text, lang, highlighted) {
   const lines = text.replace(/\n$/, '').split('\n').length;
   const size = fmtSize(new Blob([text]).size);
   const kind = kindOf(name, lang);
-  const project = current() && (prefs.projects || []).find(x => x.id === current().projectId);
+  const project = current() && visibleProjects().find(x => x.id === current().projectId);
   const saveToProject = project && project.folderLinked ? `<button data-act="fsave" data-fid="${id}" title="Create this file if it does not already exist">Create in folder</button>` : '';
   /* Every file gets a preview: pages render, scripts run, and other files open in the Code view. */
   const preview = kind === 'js'
@@ -4160,7 +4162,7 @@ function downloadFile(f) {
 }
 async function saveProjectFiles(files) {
   const c = current();
-  const project = c && (prefs.projects || []).find(x => x.id === c.projectId);
+  const project = c && visibleProjects().find(x => x.id === c.projectId);
   if (!project || !project.folderLinked) throw new Error('Open a project connected to a folder first.');
   if (project.nativePath) {
     const saved = [], failed = [];
@@ -4228,7 +4230,7 @@ async function createProjectFile(root, path) {
 }
 async function applyProjectPatch(source) {
   const c = current();
-  const project = c && (prefs.projects || []).find(x => x.id === c.projectId);
+  const project = c && visibleProjects().find(x => x.id === c.projectId);
   if (!project || !project.folderLinked) throw new Error('Open a project connected to a folder first.');
   const changes = parseUnifiedPatch(source);
   if (project.nativePath) {
@@ -4274,11 +4276,36 @@ async function applyProjectPatch(source) {
       if (await latest.text() !== item.original) throw new Error(`${item.path} changed while the patch was being prepared. Generate a fresh edit and try again.`);
     }
   }
-  for (const item of prepared) {
-    const handle = item.create ? await createProjectFile(root, item.path) : item.handle;
-    const writable = await handle.createWritable();
-    await writable.write(item.updated);
-    await writable.close();
+  /* Write every file, or put back the ones already changed if a later write fails, so a multi-file
+     patch never leaves the project half-edited. Newly created files cannot be removed here, so they are named. */
+  const attempted = [];
+  let failing = null;
+  try {
+    for (const item of prepared) {
+      failing = item;
+      if (!item.create) attempted.push(item);
+      const handle = item.create ? await createProjectFile(root, item.path) : item.handle;
+      if (item.create) attempted.push(item);
+      const writable = await handle.createWritable();
+      await writable.write(item.updated);
+      await writable.close();
+    }
+  } catch (error) {
+    const restored = [];
+    const kept = [];
+    for (const item of attempted.reverse()) {
+      if (item.create) { kept.push(item.path); continue; }
+      try {
+        const writable = await item.handle.createWritable();
+        await writable.write(item.original);
+        await writable.close();
+        restored.push(item.path);
+      } catch (restoreError) { kept.push(item.path); }
+    }
+    const reason = `Could not write ${failing?.path || 'a file'}: ${error.message || error}.`;
+    const undo = restored.length ? ` Restored ${restored.join(', ')}.` : '';
+    const left = kept.length ? ` These could not be restored automatically: ${kept.join(', ')}.` : '';
+    throw new Error(reason + undo + left + ' No other changes were kept.');
   }
   return { root: root.name, paths: prepared.map(x => x.path) };
 }
@@ -4691,12 +4718,25 @@ $('pinBar').addEventListener('click', e => {
   }
 });
 
+/* While Volt is working, the status word rotates. Code mode and normal chat use their own words. */
+const BUSY_WORDS = {
+  chat: ['Thinking', 'Working it out', 'Writing', 'Putting it together'],
+  code: ['Thinking', 'Reading the code', 'Writing code', 'Checking the logic']
+};
+let busyWordIndex = 0;
+setInterval(() => {
+  const labels = document.querySelectorAll('.typing .tlabel');
+  if (!labels.length) return;
+  busyWordIndex++;
+  const words = BUSY_WORDS[prefs.codeMode ? 'code' : 'chat'];
+  labels.forEach(el => { el.textContent = words[busyWordIndex % words.length]; });
+}, 2200);
 function renderAll(scrollBottom = true) {
   restoreComposer();
   const c = current();
   els.title.textContent = c && c.messages.length ? c.title : 'New chat';
   if (!c || !c.messages.length) {
-    const hp = c && c.projectId ? (prefs.projects || []).find(x => x.id === c.projectId) : null;
+    const hp = c && c.projectId ? visibleProjects().find(x => x.id === c.projectId) : null;
     els.col.innerHTML = `<div class="empty home">
       <div class="home-hero">
         <svg class="home-orb" viewBox="0 0 72 72" aria-hidden="true">
@@ -4749,7 +4789,8 @@ function renderAll(scrollBottom = true) {
   renderPinBar();
   syncProjBtn();
   renderList();
-  if (scrollBottom) els.chat.scrollTop = els.chat.scrollHeight;
+  if (!c || !c.messages.length) els.chat.scrollTop = 0;
+  else if (scrollBottom) els.chat.scrollTop = els.chat.scrollHeight;
   requestAnimationFrame(updateJump);
 }
 
@@ -4769,7 +4810,7 @@ function titleFor(text) {
 
 function currentChatHasProjectFolder() {
   const c = current();
-  return !!(c && (prefs.projects || []).some(p => p.id === c.projectId && p.folderLinked));
+  return !!(c && visibleProjects().some(p => p.id === c.projectId && p.folderLinked));
 }
 function buildMsg(m, i) {
   const ts = m.ts ? `<span class="ts">${fmtTime(m.ts)}</span>` : '';
@@ -5187,14 +5228,19 @@ const AUTO_CHAIN = [
   { model: 'ovh:Qwen3.6-27B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.6-27B', limit: 45000 },
   { model: AUTO_MODEL.id, url: '/api/chat', wire: AUTO_MODEL.id, limit: 30000 }
 ];
-/* Tries each provider in turn. A provider that errors, is rate-limited or sends no response
-   within its limit is skipped; the first one that answers is streamed. Returns the response
-   and the model that produced it. */
+/* Tries each provider in turn. Any failure (error, rate limit, timeout, no response) moves on to the
+   next provider. A provider that just failed is skipped for a short cooldown so repeated messages do
+   not keep hitting a provider that is down. The last provider is always tried so the chain never
+   becomes empty. The first provider that answers is returned with the model that produced it. */
+const AUTO_COOLDOWN_MS = 3 * 60 * 1000;
+const autoCooldown = new Map();
 async function autoChainFetch(reqMessages, parent) {
   let last = null;
   for (let i = 0; i < AUTO_CHAIN.length; i++) {
     const p = AUTO_CHAIN[i];
+    const isLast = i === AUTO_CHAIN.length - 1;
     if (parent.signal.aborted) throw new DOMException('Stopped', 'AbortError');
+    if (!isLast && (autoCooldown.get(p.model) || 0) > Date.now()) continue;
     const attempt = new AbortController();
     const onParentAbort = () => attempt.abort();
     parent.signal.addEventListener('abort', onParentAbort);
@@ -5214,11 +5260,12 @@ async function autoChainFetch(reqMessages, parent) {
         signal: attempt.signal
       });
       last = { res, model: p.model };
-      if (res.ok) return last;
-      if (res.status === 401 || res.status === 403 || i === AUTO_CHAIN.length - 1) return last;
+      if (res.ok) { autoCooldown.delete(p.model); return last; }
+      if (!isLast) autoCooldown.set(p.model, Date.now() + AUTO_COOLDOWN_MS);
     } catch (err) {
       if (parent.signal.aborted) throw err;
-      if (i === AUTO_CHAIN.length - 1) throw err;
+      if (!isLast) autoCooldown.set(p.model, Date.now() + AUTO_COOLDOWN_MS);
+      if (isLast) throw err;
     } finally {
       clearTimeout(timer);
       parent.signal.removeEventListener('abort', onParentAbort);
@@ -5561,6 +5608,15 @@ async function readProjectSnapshot(project, requestText = '') {
   }
 }
 
+/* Guests (signed out) get a few free messages on this device. Signing in removes the limit. */
+const GUEST_MESSAGE_LIMIT = 10;
+const GUEST_KEY = 'volt_guest_messages';
+function guestUsed() { return parseInt(localStorage.getItem(GUEST_KEY) || '0', 10) || 0; }
+function guestLimitReached() { return !signedIn() && guestUsed() >= GUEST_MESSAGE_LIMIT; }
+function requireSignIn() {
+  openAuth();
+  $('authIntro').textContent = `You have used your ${GUEST_MESSAGE_LIMIT} free messages. Sign in with email to keep chatting.`;
+}
 async function send(text) {
   text = (text ?? els.input.value).trim();
   if (prefs.cli && text.startsWith(':')) {
@@ -5569,6 +5625,7 @@ async function send(text) {
   }
   if (prefs.cli) cliEchoes = [];
   if ((!text && !pending.length) || busy) return;
+  if (guestLimitReached()) { toast('Sign in to keep chatting.'); return requireSignIn(); }
   if (!text) text = 'Please review the attached file(s).';
   stopSpeaking();
   els.input.value = ''; autosize();
@@ -5581,9 +5638,10 @@ async function send(text) {
     : text;
   const textFiles = files.filter(f => f.text !== undefined);
   const images = files.filter(f => f.image).map(f => f.image);
+  if (!signedIn()) localStorage.setItem(GUEST_KEY, String(guestUsed() + 1));
   const c = ensureCurrent();
   let apiText = text + textFiles.map(f => `\n\n--- Attached file: ${f.name} ---\n${f.text}`).join('');
-  const project = (prefs.projects || []).find(p => p.id === c.projectId);
+  const project = visibleProjects().find(p => p.id === c.projectId);
   if (project && project.folderLinked) {
     apiText += await readProjectSnapshot(project, text);
     if (prefs.model === AUTO_MODEL.id) oneShotModel = KILO_AUTO_MODEL.id;
@@ -6704,12 +6762,16 @@ var editingProjId = null;
 var editingFolderHandle = null;
 var editingNativePath = null;
 var editingFolderAction = 'remove';
+/* Projects are a signed-in feature. Signed out, they are hidden and not used; nothing is deleted. */
+function signedIn() { const s = session(); return !!(s && s.token); }
+function visibleProjects() { return signedIn() ? visibleProjects() : []; }
 function activeProjId() {
   const id = prefs.activeProj;
-  return id && (prefs.projects || []).some(p => p.id === id) ? id : undefined;
+  return id && visibleProjects().some(p => p.id === id) ? id : undefined;
 }
 /* Select a project (or clear with null): new chats start in it, and an empty current chat joins it. */
 function setActiveProj(pid) {
+  if (pid && !signedIn()) return;
   prefs.activeProj = pid || undefined;
   persist();
   const c = current();
@@ -6719,6 +6781,7 @@ function setActiveProj(pid) {
 }
 
 function showProjects(view) {
+  if (view && !signedIn()) { toast('Sign in to use projects.'); view = null; }
   projView = view || null;
   $('navProjects').classList.toggle('on', !!projView);
   $('list').hidden = !!projView;
@@ -6734,7 +6797,7 @@ function showProjects(view) {
 }
 function renderProjects() {
   const el = $('projList');
-  const projs = prefs.projects || [];
+  const projs = visibleProjects();
   const cur = projs.find(p => p.id === projView);
   const countOf = pid => convos.filter(c => c.projectId === pid && c.messages.length).length;
   if (!cur) {
@@ -6761,7 +6824,7 @@ $('projList').addEventListener('click', e => {
   const t = e.target.closest('[data-pview],[data-pnew],[data-pedit],[data-pnewchat],[data-pselect],[data-id]');
   if (!t) return;
   if (t.dataset.pnew !== undefined) return openProjectDialog(null);
-  if (t.dataset.pedit) return openProjectDialog((prefs.projects || []).find(p => p.id === t.dataset.pedit));
+  if (t.dataset.pedit) return openProjectDialog(visibleProjects().find(p => p.id === t.dataset.pedit));
   if (t.dataset.pnewchat) return newChatIn(t.dataset.pnewchat);
   if (t.dataset.pselect) return setActiveProj(prefs.activeProj === t.dataset.pselect ? null : t.dataset.pselect);
   if (t.dataset.pview !== undefined) {
@@ -6775,6 +6838,7 @@ function newChatIn(pid) {
   newChat();
 }
 function openProjectDialog(p) {
+  if (!signedIn()) { toast('Sign in to use projects.'); return openAuth(); }
   editingProjId = p ? p.id : null;
   editingFolderHandle = null;
   editingNativePath = p?.nativePath || null;
@@ -6896,7 +6960,7 @@ async function connectLocalAgentHost() {
     await agentBridge.request('/health');
     localAgentBoot.available = true;
     localAgentBoot.error = '';
-    for (const project of prefs.projects || []) if (project.nativePath && project.folderLinked) {
+    for (const project of visibleProjects()) if (project.nativePath && project.folderLinked) {
       await agentBridge.request('/bind-project', { projectId: project.id, path: project.nativePath }).catch(() => {});
     }
   } catch (error) {
@@ -6906,7 +6970,7 @@ async function connectLocalAgentHost() {
 }
 function agentCurrentProject() {
   const chat = current();
-  return chat && (prefs.projects || []).find(project => project.id === chat.projectId);
+  return chat && visibleProjects().find(project => project.id === chat.projectId);
 }
 async function openAgentMode() {
   await connectLocalAgentHost();
@@ -6961,7 +7025,7 @@ function agentRender() {
   }
   $('agentTask').value = run.task || '';
   $('agentTask').disabled = run.status === 'running';
-  $('agentProjectName').textContent = (prefs.projects || []).find(project => project.id === run.projectId)?.name || 'Project';
+  $('agentProjectName').textContent = visibleProjects().find(project => project.id === run.projectId)?.name || 'Project';
   const active = run.plan?.findIndex(step => !step.done) ?? -1;
   $('agentPlan').innerHTML = (run.plan?.length ? run.plan.map((step, index) => `<li class="${step.done ? 'done' : index === active && run.status === 'running' ? 'active' : ''}"><span class="agent-step-dot">${step.done ? '✓' : index + 1}</span><span>${esc(step.text)}</span></li>`).join('') : '<li><span class="agent-step-dot">1</span><span>Plan pending from the model.</span></li>');
   const changes = run.changes || [];
@@ -7084,7 +7148,7 @@ function agentCacheFiles(files) {
   while (agentRun.cacheOrder.length > 8) delete agentRun.fileCache[agentRun.cacheOrder.shift()];
 }
 async function agentCaptureChangedFiles(paths) {
-  const project = (prefs.projects || []).find(item => item.id === agentRun.projectId);
+  const project = visibleProjects().find(item => item.id === agentRun.projectId);
   const safePaths = paths.filter(Boolean);
   for (const path of safePaths) { if (agentRun.fileCache) delete agentRun.fileCache[path]; }
   agentRun.cacheOrder = (agentRun.cacheOrder || []).filter(path => !safePaths.includes(path));
@@ -7217,7 +7281,7 @@ async function agentStopTask() {
   agentRender();
 }
 async function agentLoop() {
-  const project = (prefs.projects || []).find(item => item.id === agentRun?.projectId);
+  const project = visibleProjects().find(item => item.id === agentRun?.projectId);
   if (!project?.nativePath || !agentBridge.available) { agentRun.status = 'error'; agentRun.unresolved.push('The local Volt Agent Host or connected project is unavailable.'); agentRender(); await saveAgentRun(); return; }
   try {
     if (!agentRun.projectPaths) {
@@ -7320,13 +7384,14 @@ $('projDialog').addEventListener('click', e => { if (e.target === $('projDialog'
 /* Top-bar project picker */
 function syncProjBtn() {
   const c = current();
-  const p = (prefs.projects || []).find(x => x.id === (c && c.projectId));
+  const p = visibleProjects().find(x => x.id === (c && c.projectId));
   $('projBtn').textContent = p ? p.name : 'Project';
 }
 function openProjectPicker(anchor) {
   const c = current();
   if (!c) return;
-  const projs = prefs.projects || [];
+  if (!signedIn()) { toast('Sign in to use projects.'); return openAuth(); }
+  const projs = visibleProjects();
   const menu = $('menuPop');
   menu.innerHTML = '<div class="pop-label">Move chat to project</div>' +
     (projs.length
@@ -7410,6 +7475,9 @@ async function apiCall(path, body, method) {
 }
 function renderAccount() {
   const s = session();
+  document.documentElement.classList.toggle('signed-out', !s);
+  if (!s && projView) showProjects(null);
+  if (!s && typeof syncProjBtn === 'function') syncProjBtn();
   $('accountLabel').textContent = s ? s.email : 'Sign in';
   $('accountBtn').title = s ? 'Signed in. Your chats sync to your account. Click to sign out.' : 'Sign in with email to save your chats';
 }
@@ -7464,7 +7532,7 @@ function syncPayload() {
     prefs: {
       memory: prefs.memory || [],
       profile: prefs.profile || {},
-      projects: (prefs.projects || []).map(p => ({ id: p.id, name: p.name, instructions: p.instructions, created: p.created })),
+      projects: visibleProjects().map(p => ({ id: p.id, name: p.name, instructions: p.instructions, created: p.created })),
       customSkills: prefs.customSkills || []
     }
   };
@@ -7476,11 +7544,12 @@ function mergeServer(d) {
     if (!local || (c.updated || 0) > (local.updated || 0)) byId.set(c.id, c);
   }
   convos = [...byId.values()].sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  if (currentId && !convos.some(c => c.id === currentId)) currentId = null;
   const p = d.prefs || {};
   prefs.memory = [...new Set([...(prefs.memory || []), ...(p.memory || [])])].slice(-40);
   if (!(prefs.profile && (prefs.profile.name || prefs.profile.role || prefs.profile.notes)) && p.profile) prefs.profile = Object.assign({ name: '', role: '', notes: '' }, p.profile);
-  const pids = new Set((prefs.projects || []).map(x => x.id));
-  prefs.projects = [...(prefs.projects || []), ...(p.projects || []).filter(x => !pids.has(x.id))];
+  const pids = new Set(visibleProjects().map(x => x.id));
+  prefs.projects = [...visibleProjects(), ...(p.projects || []).filter(x => !pids.has(x.id))];
   const sids = new Set((prefs.customSkills || []).map(x => x.id));
   prefs.customSkills = [...(prefs.customSkills || []), ...(p.customSkills || []).filter(x => !sids.has(x.id))];
   if (!currentId || !convos.some(c => c.id === currentId)) currentId = convos[0]?.id || null;
