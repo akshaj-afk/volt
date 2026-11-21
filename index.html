@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Volt</title>
-<meta name="description" content="Volt: a free AI assistant with reasoning, code, math, diagrams and voice." />
+<meta name="description" content="Volt: an AI assistant with reasoning, code, math, diagrams and voice." />
 <meta name="theme-color" content="#fbfbf8" />
 <link rel="icon" type="image/png" href="volt.png" />
 <link rel="apple-touch-icon" href="volt.png" />
@@ -2965,6 +2965,7 @@ html:not([data-mode="cli"]) .composer:focus-within { transform: translateY(-1px)
         <span>Show reasoning</span>
         <span class="switch"><input type="checkbox" id="reasonToggle" /><span class="slider"></span></span>
       </label>
+      <button class="foot-row" id="accountBtn"><span id="accountLabel">Sign in</span></button>
       <button class="foot-row" id="themeBtn"><span id="themeLabel">Dark mode</span><span id="themeIcon" style="display:grid"></span></button>
       <button class="foot-row" id="settingsBtn"><span>Settings &amp; profile</span><span id="settingsIcon" style="display:grid"></span></button>
     </div>
@@ -3029,9 +3030,9 @@ html:not([data-mode="cli"]) .composer:focus-within { transform: translateY(-1px)
                 <span>Thinking</span>
                 <span class="switch"><input type="checkbox" id="thinkToggle" /><span class="slider"></span></span>
               </label>
-              <label class="think-toggle code-toggle" title="Code mode: use Kilo Gateway coding models">
+              <label class="think-toggle code-toggle" id="codeToggle" role="switch" aria-checked="false" title="Code mode: focus on writing and fixing code">
                 <span>Code</span>
-                <span class="switch"><input type="checkbox" id="codeToggle" /><span class="slider"></span></span>
+                <span class="switch"><span class="slider"></span></span>
               </label>
               <div class="state-pills" id="statePills"></div>
             </div>
@@ -3134,7 +3135,7 @@ html:not([data-mode="cli"]) .composer:focus-within { transform: translateY(-1px)
       <div class="set-row"><span>Creativity<span class="sub">Low is focused, high is exploratory</span></span>
         <span style="display:inline-flex;align-items:center;gap:10px"><input type="range" id="setTemp" min="0" max="1.5" step="0.1" /><b class="set-num" id="tempVal">1.0</b></span>
       </div>
-      <div class="set-row"><span>Code mode<span class="sub">Kilo Gateway coding models. Free providers may log prompts or use them for training; avoid confidential code.</span></span>
+      <div class="set-row"><span>Code mode<span class="sub">Focuses Volt on writing, reviewing and fixing code.</span></span>
         <span class="switch"><input type="checkbox" id="setCode" /><span class="slider"></span></span>
       </div>
       <div class="set-row"><span>Shakespearean English<span class="sub">Volt answers in the style of Shakespeare</span></span>
@@ -3231,7 +3232,7 @@ html:not([data-mode="cli"]) .composer:focus-within { transform: translateY(-1px)
     <span class="spacer"></span>
     <button id="agentClose" class="icon-btn" aria-label="Close Agent Mode">×</button>
   </div>
-  <div class="agent-context"><span id="agentProjectName">No project selected</span><span id="agentModelName">Kilo model</span></div>
+  <div class="agent-context"><span id="agentProjectName">No project selected</span><span id="agentModelName">Auto</span></div>
   <div class="agent-layout">
     <aside class="agent-side"><h4>Plan &amp; progress</h4><ol class="agent-plan" id="agentPlan"><li><span class="agent-step-dot">1</span><span>Describe a project task to begin.</span></li></ol></aside>
     <section class="agent-main">
@@ -3271,6 +3272,20 @@ html:not([data-mode="cli"]) .composer:focus-within { transform: translateY(-1px)
   </div>
 </dialog>
 
+<dialog id="authDialog" class="sheet" aria-label="Sign in">
+  <style>#authDialog label[hidden]{display:none}</style>
+  <h3>Sign in to Volt</h3>
+  <p class="cf-body" id="authIntro">Enter your email and we will send you a 6-digit code.</p>
+  <label id="authEmailLabel">Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" /></label>
+  <label id="authCodeLabel" hidden>Verification code<input id="authCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456" /></label>
+  <p class="set-note" id="authMsg" role="alert"></p>
+  <div class="sheet-actions">
+    <button id="authCancel" type="button">Cancel</button>
+    <span class="spacer"></span>
+    <button id="authBack" type="button" hidden>Use another email</button>
+    <button id="authNext" type="button" class="primary">Send code</button>
+  </div>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="menu-pop" id="menuPop" hidden></div>
 </div>
@@ -3409,14 +3424,14 @@ const ICONS = {
   down: '<svg viewBox="0 0 24 24"><path d="M17 2v11l-5 9-1.5-1a3 3 0 0 1-.8-2.6L10.5 15H4a2 2 0 0 1-2-2.4l1.4-7A2 2 0 0 1 5.4 4H17z"/><path d="M17 13h3a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1h-3"/></svg>'
 };
 
-// Fallback list. On load, Volt replaces this with the live list of free models from OpenRouter.
+// Fallback list. On load, Volt replaces this with the live model list.
 const AUTO_MODEL = { group: 'General', id: 'openrouter/free', name: 'Auto' };
 /* Route Kilo requests through Volt's same-origin function to avoid browser CORS failures. */
 const KILO_GATEWAY_BASE = '/api/kilo?path=';
 const KILO_AUTO_MODEL = {
-  group: 'Kilo Gateway - Free (providers may train on prompts)',
+  group: 'Kilo Gateway',
   id: 'kilo:kilo-auto/free',
-  name: 'Auto Free - Kilo Gateway (coding)'
+  name: 'Auto'
 };
 const MODELS = [AUTO_MODEL];
 /* MANEX's Cation agent. Its API key lives on the server (api/cation.js), never in this page. */
@@ -3499,75 +3514,38 @@ function webllmSSEResponse(id, messages, signal) {
   return new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
 }
 
-/* General chat keeps OpenRouter's free catalog. Code mode uses Kilo's live free catalog only. */
+/* The model list: Auto, Cation and the live catalogue. Code mode changes the prompt, not the model list. */
 let freeCatalog = [];
-let kiloFreeCatalog = [];
+function visibleModels() { return freeCatalog; }
 const isCodingModel = m => /coder|coding|\bcode\b|programming|software|developer|qwen|codestral|devstral|starcoder|codellama|flint|laguna|ernie.*flash|nemotron.*(ultra|lightning)|north.*code/i.test(`${m.id || ''} ${m.name || ''} ${m.description || ''}`);
-function visibleModels() {
-  if (!prefs.codeMode) return freeCatalog;
-  const kiloCode = kiloFreeCatalog.filter(m => isCodingModel(m) && !isBlockedModel('kilo:' + m.id)).map(m => ({
-    group: 'Kilo Gateway - Free (providers may train on prompts)',
-    id: 'kilo:' + m.id,
-    name: m.name || m.id
-  }));
-  return [KILO_AUTO_MODEL, ...kiloCode];
-}
 function syncCodeModels() {
   MODELS.length = 0;
-  MODELS.push(...(prefs.codeMode ? visibleModels() : [AUTO_MODEL, CATION_MODEL, ...visibleModels()]));
-  if (prefs.codeMode && !prefs.model?.startsWith('kilo:')) { prefs.model = KILO_AUTO_MODEL.id; persist(); }
-  if (prefs.codeMode && !visibleModels().some(m => m.id === prefs.model)) { prefs.model = KILO_AUTO_MODEL.id; persist(); }
-  if (!prefs.codeMode && prefs.model?.startsWith('kilo:')) { prefs.model = AUTO_MODEL.id; persist(); }
+  MODELS.push(AUTO_MODEL, CATION_MODEL, ...visibleModels());
+  const known = MODELS.some(m => m.id === prefs.model) || (prefs.customId && prefs.model === prefs.customId);
+  if (!known) { prefs.model = AUTO_MODEL.id; persist(); }
   buildModelSelect();
 }
 function setCodeMode(on) {
   prefs.codeMode = !!on;
-  if (prefs.codeMode) {
-    /* A rate limit or busy moment used to block a coding model for good. Give them another chance each time code mode turns on. */
-    prefs.badModels = (prefs.badModels || []).filter(id => !isCodingModel({ id, name: id }));
-    if (!prefs.model?.startsWith('kilo:')) prefs.model = KILO_AUTO_MODEL.id;
-  } else if (prefs.model?.startsWith('kilo:')) {
-    prefs.model = AUTO_MODEL.id;
-  }
   persist();
-  syncCodeModels();
-  $('codeToggle').checked = prefs.codeMode === true;
-  $('setCode').checked = prefs.codeMode === true;
+  const sc = $('setCode');
+  if (sc) sc.checked = prefs.codeMode === true;
   syncCodeToggle();
   renderStatePills();
-  toast(prefs.codeMode ? 'Code mode on: Kilo Gateway coding models.' : 'Code mode off.');
+  toast(prefs.codeMode ? 'Code mode on.' : 'Code mode off.');
 }
-
 async function loadFreeModels() {
   try {
     const r = await fetch('https://openrouter.ai/api/v1/models');
     if (!r.ok) throw new Error('catalogue unavailable');
     const { data } = await r.json();
-    const free = data
+    const list = data
       .filter(m => m.id.endsWith(':free') && !isBlockedModel(m.id))
       .map(m => ({ group: groupForModel(m), id: m.id, name: (m.name || m.id).replace(/^[^:]*:\s*/, '') }))
       .sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
-    if (free.length) freeCatalog = free;
-  } catch { /* keep fallback */ }
-
-  // Drop a saved model that is no longer free or listed
-  if (isBlockedModel(prefs.model)) prefs.model = AUTO_MODEL.id;
+    if (list.length) freeCatalog = list;
+  } catch { /* keep the fallback list */ }
   syncCodeModels();
-  if (prefs.model && !MODELS.some(m => m.id === prefs.model) && prefs.model !== prefs.customId) {
-    prefs.model = AUTO_MODEL.id;
-    persist();
-  }
-  buildModelSelect();
-}
-async function loadKiloFreeModels() {
-  try {
-    const r = await fetch(KILO_GATEWAY_BASE + 'models');
-    if (!r.ok) throw new Error('Kilo model catalog unavailable');
-    const { data } = await r.json();
-    kiloFreeCatalog = (data || []).filter(m => m.isFree === true && m.id !== 'kilo-auto/free' && !/batch|embed|rerank|moderation|safety/i.test(m.id));
-  } catch { kiloFreeCatalog = []; }
-  syncCodeModels();
-  if (prefs.codeMode && prefs.model === KILO_AUTO_MODEL.id) buildModelSelect();
 }
 const SUGGESTION_POOL = [
   'Explain how a neural network learns, in plain terms',
@@ -3688,6 +3666,7 @@ async function dbDelete(key) {
 }
 let saveFailed = false;
 function persist() {
+  scheduleSync();
   try {
     const p = JSON.stringify(prefs);
     localStorage.setItem('volt_prefs', p);
@@ -3695,7 +3674,7 @@ function persist() {
   } catch { /* prefs are small; ignore */ }
   dbPut('convos', convos)
     .then(() => { saveFailed = false; })
-    .catch(() => { if (!saveFailed) toast('Could not save chats in this browser. Free up some space and try again.'); saveFailed = true; });
+    .catch(() => { if (!saveFailed) toast('Could not save chats in this browser. Clear some space and try again.'); saveFailed = true; });
   updateStorageInfo();
 }
 /* Load chats from IndexedDB after startup. Chats saved in localStorage by older builds are moved over once. */
@@ -3754,7 +3733,7 @@ els.model.addEventListener('change', async () => {
   if (els.model.value === '__custom__') {
     const id = await askText({
       title: 'Custom model', label: 'OpenRouter model ID',
-      placeholder: 'vendor/model:free', value: prefs.customId || '', ok: 'Use model'
+      placeholder: 'vendor/model', value: prefs.customId || '', ok: 'Use model'
     });
     if (id) { prefs.customId = id; prefs.model = id; toast('Model set to ' + id); }
     buildModelSelect();
@@ -3821,7 +3800,7 @@ const CLI_HELP = [
   [':thinking on|off', 'Turn reasoning mode on or off.'],
   [':web on|off', 'Turn web search on or off.'],
   [':shakespeare on|off', 'Answer in Shakespearean English or plain English.'],
-  [':code on|off', 'Code mode: use Kilo Gateway coding models.'],
+  [':code on|off', 'Code mode: focus on writing and fixing code.'],
   [':pin [number]', 'Pin the last answer, or a message by number.'],
   [':pins', 'List pinned messages in this chat.'],
   [':unpin <number>', 'Unpin a message from the :pins list.'],
@@ -3992,8 +3971,7 @@ thinkToggle.parentElement.addEventListener('click', e => {
   persist();
 });
 const codeToggle = $('codeToggle');
-codeToggle.checked = prefs.codeMode === true;
-codeToggle.parentElement.addEventListener('click', e => {
+codeToggle.addEventListener('click', e => {
   e.preventDefault();
   setCodeMode(!prefs.codeMode);
 });
@@ -5084,7 +5062,7 @@ function setBusy(v) {
 /* Streams one reply. assistantMsg is the message excluded from the context;
    opts.target is the object the text accumulates into (an alt answer when
    comparing models) and opts.render decides what gets painted. */
-/* ---------- Wikipedia search (free, no key, CORS enabled) ---------- */
+/* ---------- Wikipedia search (no key, CORS enabled) ---------- */
 async function searxContext(question, signal) {
   const base = (prefs.searxng || '').trim().replace(/\/+$/, '');
   if (!base) return [];
@@ -5167,9 +5145,9 @@ function isTransientError(err) {
   return err.status === 408 || err.status === 429 || err.status >= 500;
 }
 function friendlyError(err, model) {
-  if (err?.name === 'TypeError' && model?.startsWith('kilo:')) return `Could not connect to Kilo Gateway. Check your connection or try another free model. (${err.message})`;
+  if (err?.name === 'TypeError' && model?.startsWith('kilo:')) return `Could not connect to Kilo Gateway. Check your connection or try another model. (${err.message})`;
   if (err?.name === 'TypeError') return `Volt could not reach the server. Check your connection and try again. (${err.message})`;
-  if (err?.status === 429 && model?.startsWith('kilo:')) return "Kilo Gateway's free request limit is shared across models for your network. Wait a bit, then try again.";
+  if (err?.status === 429 && model?.startsWith('kilo:')) return "Kilo Gateway's request limit is shared across models for your network. Wait a bit, then try again.";
   if (err?.status === 429 && model !== CATION_ID) return 'This model is rate-limited right now. Wait a minute, or pick another model.';
   return err?.message || 'Something went wrong. Please try again.';
 }
@@ -5227,7 +5205,7 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   } else if (WEBLLM_MODELS[useModel]) {
     res = webllmSSEResponse(useModel, reqMessages, ctrl.signal);
   } else if (useModel.startsWith('kilo:')) {
-    /* Volt's same-origin API route forwards only free-model requests to Kilo. */
+    /* Volt's same-origin API route forwards requests to Kilo. */
     res = await fetch(KILO_GATEWAY_BASE + 'chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -5932,7 +5910,7 @@ function enc(s) {
 function shortModel(id) {
   if (!id) return 'Unknown model';
   if (id === AUTO_MODEL.id) return 'Auto';
-  if (id === KILO_AUTO_MODEL.id || id === 'kilo-auto/free') return 'Kilo Auto Free';
+  if (id === KILO_AUTO_MODEL.id || id === 'kilo-auto/free') return 'Auto';
   if (id === CATION_ID) return 'Cation';
   return id.replace(/^kilo:/, '').replace(/:free$/, '').split('/').pop();
 }
@@ -6882,7 +6860,7 @@ async function openAgentMode() {
   catch (error) { return toast('Could not connect the project folder: ' + error.message); }
   setCodeMode(true);
   $('agentProjectName').textContent = project.name;
-  $('agentModelName').textContent = MODELS.find(model => model.id === selectedModel())?.name || 'Kilo Auto Free';
+  $('agentModelName').textContent = MODELS.find(model => model.id === selectedModel())?.name || 'Auto';
   agentRun = await dbGet('agent-session:' + project.id).catch(() => null);
   if (agentRun?.status === 'running') agentRun.status = 'paused';
   if (agentRun && agentRun.projectId !== project.id) agentRun = null;
@@ -7316,9 +7294,8 @@ $('menuPop').addEventListener('click', e => {
 /* ============================ WORKSPACE NAV ============================ */
 /* Shows Code mode on or off on the composer switch, from the single source of truth (prefs.codeMode). */
 function syncCodeToggle() {
-  const label = $('codeToggle').parentElement;
+  const label = $('codeToggle');
   const on = prefs.codeMode === true;
-  $('codeToggle').checked = on;
   label.classList.toggle('on', on);
   label.setAttribute('aria-checked', on ? 'true' : 'false');
   label.setAttribute('role', 'switch');
@@ -7347,6 +7324,131 @@ $('navSearch').addEventListener('click', () => { setNavCollapsed(false); focusCh
 $('navSkills').addEventListener('click', () => { setNavCollapsed(false); setTimeout(() => togglePopover(true), 0); });
 $('navProjects').addEventListener('click', () => { setNavCollapsed(false); showProjects('__all__'); });
 
+/* ============================ ACCOUNT (email sign-in) ============================ */
+var pulled = false;
+var syncTimer = null;
+var authEmail = '';
+const SESSION_KEY = 'volt_session';
+function session() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } }
+function setSession(s) {
+  if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s)); else localStorage.removeItem(SESSION_KEY);
+  pulled = false;
+  renderAccount();
+}
+async function apiCall(path, body, method) {
+  const s = session();
+  const res = await fetch(path, {
+    method: method || (body !== undefined ? 'POST' : 'GET'),
+    headers: Object.assign({ 'Content-Type': 'application/json' }, s ? { Authorization: 'Bearer ' + s.token } : {}),
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+  let data = {};
+  try { data = await res.json(); } catch {}
+  if (!res.ok) { const e = new Error(data.error || `Request failed (HTTP ${res.status})`); e.status = res.status; throw e; }
+  return data;
+}
+function renderAccount() {
+  const s = session();
+  $('accountLabel').textContent = s ? s.email : 'Sign in';
+  $('accountBtn').title = s ? 'Signed in. Your chats sync to your account. Click to sign out.' : 'Sign in with email to save your chats';
+}
+function openAuth() { authStep(1); $('authDialog').showModal(); }
+function authStep(n) {
+  const code = n === 2;
+  $('authEmailLabel').hidden = code;
+  $('authCodeLabel').hidden = !code;
+  $('authBack').hidden = !code;
+  $('authNext').textContent = code ? 'Verify and sign in' : 'Send code';
+  $('authIntro').textContent = code ? `Enter the 6-digit code sent to ${authEmail}.` : 'Enter your email and we will send you a 6-digit code.';
+  $('authMsg').textContent = '';
+  if (code) $('authCode').value = '';
+  setTimeout(() => (code ? $('authCode') : $('authEmail')).focus(), 0);
+}
+async function authNext() {
+  const btn = $('authNext');
+  btn.disabled = true;
+  try {
+    if ($('authCodeLabel').hidden) {
+      authEmail = $('authEmail').value.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authEmail)) throw new Error('Enter a valid email address.');
+      await apiCall('/api/auth/send-code', { email: authEmail });
+      authStep(2);
+      toast('Code sent. Check your inbox.');
+    } else {
+      const code = $('authCode').value.trim();
+      if (!/^\d{6}$/.test(code)) throw new Error('Enter the 6-digit code.');
+      const r = await apiCall('/api/auth/verify', { email: authEmail, code });
+      setSession({ token: r.token, email: r.email });
+      $('authDialog').close();
+      toast('Signed in. Loading your chats…');
+      await pullFromServer();
+      toast('Signed in. Your chats are saved to your account.');
+    }
+  } catch (e) {
+    $('authMsg').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function signOut() {
+  if (!await askConfirm({ title: 'Sign out', body: 'Your chats stay on this device. They stop syncing until you sign in again.', ok: 'Sign out' })) return;
+  try { await apiCall('/api/auth/signout', {}); } catch {}
+  setSession(null);
+  toast('Signed out.');
+}
+function syncPayload() {
+  const convoCopy = convos.slice(0, 300).map(c => ({ ...c, messages: c.messages.map(m => { const { images, ...rest } = m; return rest; }) }));
+  return {
+    convos: convoCopy,
+    prefs: {
+      memory: prefs.memory || [],
+      profile: prefs.profile || {},
+      projects: (prefs.projects || []).map(p => ({ id: p.id, name: p.name, instructions: p.instructions, created: p.created })),
+      customSkills: prefs.customSkills || []
+    }
+  };
+}
+function mergeServer(d) {
+  const byId = new Map(convos.map(c => [c.id, c]));
+  for (const c of d.convos || []) {
+    const local = byId.get(c.id);
+    if (!local || (c.updated || 0) > (local.updated || 0)) byId.set(c.id, c);
+  }
+  convos = [...byId.values()].sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  const p = d.prefs || {};
+  prefs.memory = [...new Set([...(prefs.memory || []), ...(p.memory || [])])].slice(-40);
+  if (!(prefs.profile && (prefs.profile.name || prefs.profile.role || prefs.profile.notes)) && p.profile) prefs.profile = Object.assign({ name: '', role: '', notes: '' }, p.profile);
+  const pids = new Set((prefs.projects || []).map(x => x.id));
+  prefs.projects = [...(prefs.projects || []), ...(p.projects || []).filter(x => !pids.has(x.id))];
+  const sids = new Set((prefs.customSkills || []).map(x => x.id));
+  prefs.customSkills = [...(prefs.customSkills || []), ...(p.customSkills || []).filter(x => !sids.has(x.id))];
+  if (!currentId || !convos.some(c => c.id === currentId)) currentId = convos[0]?.id || null;
+  persist();
+  renderAll(false);
+  renderAccount();
+}
+async function pullFromServer() {
+  const r = await apiCall('/api/data');
+  if (r.data) mergeServer(r.data);
+  pulled = true;
+  await pushToServer();
+}
+async function pushToServer() {
+  if (!session() || !pulled) return;
+  try { await apiCall('/api/data', syncPayload(), 'PUT'); }
+  catch (e) { if (e.status === 401) setSession(null); else console.warn('Could not sync chats:', e.message); }
+}
+function scheduleSync() {
+  if (!session() || !pulled) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushToServer, 1500);
+}
+$('accountBtn').addEventListener('click', () => (session() ? signOut() : openAuth()));
+$('authNext').addEventListener('click', authNext);
+$('authBack').addEventListener('click', () => authStep(1));
+$('authCancel').addEventListener('click', () => $('authDialog').close());
+['authEmail', 'authCode'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); authNext(); } }));
+
 /* ============================ INIT ============================ */
 /* Very old browsers (Chrome on Windows 8 stops at version 109) can lack features Volt needs. Say so plainly. */
 if (!window.fetch || !window.TextDecoder || !window.indexedDB) {
@@ -7358,14 +7460,15 @@ applyMode();
 setNavCollapsed(!!prefs.navCollapsed);
 syncCodeToggle();
 buildModelSelect();
+renderAccount();
 loadFreeModels();
-loadKiloFreeModels();
 renderStatePills();
 renderAll();
 setSideTab(sideTab);
 autosize();
 updateJump();
 persist();
+if (session()) pullFromServer().catch(e => toast('Could not load your saved chats: ' + e.message));
 </script>
 </body>
 </html>
