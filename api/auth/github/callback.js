@@ -1,9 +1,8 @@
-/* GET /api/auth/github/callback — GitHub returns here.
-   Checks the state, exchanges the code for a token, reads the verified primary email,
-   then sends the browser back to the app with the session in the URL fragment (#volt-auth=...). */
-const { verify, issueSession, appUrl, readCookie, redirect } = require('../../../lib/auth');
+// GET /api/auth/github/callback: GitHub returns here. Checks the state, exchanges the code for a token,
+// reads the verified primary email, then returns the browser to the app with the session in the URL fragment.
+import { verify, issueSession, appUrl, readCookie, redirect } from '../../../lib/github-session.js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const base = appUrl(req);
   const u = new URL(req.url, base);
   const fail = msg => redirect(res, `${base}/#volt-auth-error=${encodeURIComponent(msg)}`);
@@ -49,4 +48,4 @@ module.exports = async function handler(req, res) {
   const session = issueSession(email);
   const frag = new URLSearchParams({ 'volt-auth': session, 'volt-email': email, 'volt-name': name });
   redirect(res, `${state.r}#${frag.toString()}`);
-};
+}
