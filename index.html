@@ -6,8 +6,8 @@
 <title>Kepler</title>
 <meta name="description" content="Kepler: an AI assistant with reasoning, code, math, diagrams and voice." />
 <meta name="theme-color" content="#fbfbf8" />
-<link rel="icon" type="image/svg+xml" href="kepler.svg" />
-<link rel="apple-touch-icon" href="kepler.svg" />
+<link rel="icon" type="image/png" href="kepler_logo.png" />
+<link rel="apple-touch-icon" href="kepler_logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -3005,7 +3005,7 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <span class="brand-mark">
-        <img class="logo" src="kepler.svg" alt="Kepler" />
+        <img class="logo" src="kepler_logo.png" alt="Kepler" />
         <span class="wordmark">Kepler</span>
       </span>
       <button class="icon-btn" id="collapseBtn" title="Collapse sidebar" aria-label="Collapse sidebar">
@@ -4162,7 +4162,7 @@ function fileCardHTML(name, text, lang, highlighted) {
     ? `<button data-act="fpreview" data-fid="${id}">Run</button>`
     : `<button data-act="fpreview" data-fid="${id}">Preview</button>`;
   return `<div class="file-card">
-      <div class="file-badge" title="${esc(ext)}"><img class="file-logo" src="kepler.svg" alt="Kepler" /></div>
+      <div class="file-badge" title="${esc(ext)}"><img class="file-logo" src="kepler_logo.png" alt="Kepler" /></div>
       <div class="file-meta">
         <div class="file-name">${esc(name)}</div>
         <div class="file-sub">${esc(lang || 'text')} · ${lines} lines · ${size}</div>
@@ -4904,7 +4904,7 @@ function renderAll(scrollBottom = true) {
     const recentChats = convos.filter(x => x.messages.length).sort((a, b) => (b.updated || 0) - (a.updated || 0)).slice(0, 4);
     els.col.innerHTML = `<div class="empty home">
       <div class="home-hero">
-        <img class="home-orb kepler-home" src="kepler_logo.png" alt="Kepler" onerror="this.onerror=null;this.src='kepler.svg'" />
+        <img class="home-orb kepler-home" src="kepler_logo.png" alt="Kepler" />
         <h1>${hp ? `How can I help you in <span class="pj-name">${esc(hp.name)}</span>?` : hello()}</h1>
         <p>${hp ? 'Chats here follow the instructions of this project.' : 'What are we working on today?'}</p>
         ${hp ? '<button class="pj-chip" data-pclear>Leave project</button>' : ''}
@@ -5096,7 +5096,7 @@ function renderFiles() {
       const ext = (f.name.split('.').pop() || 'FILE').toUpperCase().slice(0, 4);
       const lines = f.text.replace(/\n$/, '').split('\n').length;
       return `<div class="frow" data-fname="${esc(f.name)}" title="Open in the preview panel">
-        <div class="file-badge" title="${esc(ext)}"><img class="file-logo" src="kepler.svg" alt="Kepler" /></div>
+        <div class="file-badge" title="${esc(ext)}"><img class="file-logo" src="kepler_logo.png" alt="Kepler" /></div>
         <div class="fmeta"><div class="fname">${esc(f.name)}</div>
           <div class="fsub">${lines} lines · ${fmtSize(new Blob([f.text]).size)} · ${fmtTime(f.ts)}</div></div>
         <div class="frow-tools">
