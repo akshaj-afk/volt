@@ -1,7 +1,7 @@
-/* GET /api/auth/github?mode=signin|signup&return=<app url>
-   Starts GitHub sign-in. Sets a one-time state cookie and redirects to GitHub. */
-const crypto = require('crypto');
-const { sign, appUrl, redirect } = require('../../lib/auth');
+// GET /api/auth/github?mode=signin|signup&return=<app url>
+// Starts GitHub sign-in: sets a one-time state cookie and redirects to GitHub.
+import crypto from 'node:crypto';
+import { sign, appUrl, redirect } from '../../lib/github-session.js';
 
 function safeReturn(raw, base) {
   if (!raw) return base + '/';
@@ -11,7 +11,7 @@ function safeReturn(raw, base) {
   } catch { return base + '/'; }
 }
 
-module.exports = function handler(req, res) {
+export default function handler(req, res) {
   const clientId = process.env.GITHUB_CLIENT_ID;
   if (!clientId) {
     res.statusCode = 500;
@@ -32,4 +32,4 @@ module.exports = function handler(req, res) {
     allow_signup: 'true'
   });
   redirect(res, `https://github.com/login/oauth/authorize?${q}`);
-};
+}
