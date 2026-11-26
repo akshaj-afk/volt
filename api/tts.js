@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   try {
     const upstream = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', model: 's1' },
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', model: process.env.FISH_AUDIO_MODEL || 's2.1-pro-free' },
       body: JSON.stringify(body)
     });
     if (!upstream.ok) return res.status(upstream.status).json({ error: `Fish Audio returned HTTP ${upstream.status}.` });
