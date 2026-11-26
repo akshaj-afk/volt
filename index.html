@@ -3029,6 +3029,9 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
 .voice-end { background: var(--text); color: var(--bg); border-color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .voice-orb, .voice-orb span { animation: none !important; } }
 
+.voice-err { font-size: 13px; line-height: 1.45; color: var(--danger); background: rgba(var(--danger-rgb), .08); border: 1px solid rgba(var(--danger-rgb), .3); border-radius: 10px; padding: 8px 12px; max-width: 56ch; }
+.voice-err[hidden] { display: none; }
+
 /* Compact voice bar: a small floating bar instead of the full-screen view */
 .voice-overlay.compact {
   inset: auto; left: 50%; bottom: 16px; transform: translateX(-50%);
@@ -3478,6 +3481,7 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
     <div class="voice-orb" id="voiceOrb" data-state="idle"><span></span><span></span><span></span></div>
     <div class="voice-state" id="voiceState">Tap to start talking</div>
     <div class="voice-live" id="voiceLive"></div>
+    <div class="voice-err" id="voiceErr" role="alert" hidden></div>
     <div class="voice-mood" id="voiceMood"></div>
   </div>
   <div class="voice-controls">
@@ -8228,6 +8232,16 @@ function voiceStopLevelMeter() {
   $('voiceOrb').style.setProperty('--level', 1);
 }
 
+/* Errors stay on screen until the next successful step, so they can be read. */
+function voiceError(msg) {
+  const el = $('voiceErr');
+  el.textContent = msg;
+  el.hidden = false;
+}
+function voiceClearError() {
+  $('voiceErr').hidden = true;
+}
+
 /* Continuous recognition. Speech is kept on the voice object (not inside one recognizer session),
    so a session ending or restarting never drops what the user said. */
 function voiceShowHeard(text) {
@@ -8271,6 +8285,7 @@ function voiceStartListening() {
     const heard = (fin + interim).trim();
     if (!heard) return;
     voice.errorCount = 0;
+    voiceClearError();
     /* Without barge-in enabled, nothing is heard while Kepler speaks. This stops it hearing itself. */
     if (voice.state === 'speaking' && prefs.voiceBargeIn !== true) return;
     /* Ignore Kepler's own voice, both while it speaks and just after it finishes. */
@@ -8308,7 +8323,7 @@ function voiceStartListening() {
       'network': 'Speech recognition cannot reach its service. Check your internet connection.'
     };
     if (messages[e.error]) {
-      voiceSetState(voice.state, messages[e.error]);
+      voiceError(messages[e.error]);
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
         toast(messages[e.error]);
         voiceClose();
@@ -8373,6 +8388,7 @@ async function voiceSend(text) {
       const msg = friendlyError(err, assistantMsg.model);
       assistantMsg.error = true;
       assistantMsg.content = `**Error:** ${msg}`;
+      voiceError(msg);
       voiceSpeak('Sorry, I could not get an answer. Check the message on screen.');
     }
   } finally {
@@ -8457,9 +8473,11 @@ async function voiceSpeakFish(text, mood, token, done) {
     audio.onended = finish;
     audio.onerror = finish;
     await audio.play();
+    voiceClearError();
     return true;
   } catch (e) {
     console.warn('Fish Audio voice failed:', e.message);
+    voiceError('Fish Audio: ' + e.message + '. Using the browser voice.');
     if (!voice.fishWarned) {
       voice.fishWarned = true;
       toast('Fish Audio: ' + e.message + ' Using the browser voice.');
@@ -8578,6 +8596,7 @@ async function voiceOpen(compact = !!prefs.voiceCompact) {
   $('voiceOverlay').classList.toggle('compact', compact === true);
   $('voiceLive').textContent = '';
   $('voiceLive').classList.remove('you');
+  voiceClearError();
   $('voiceMood').textContent = '';
   if (!voices.length) fillVoices();
   voiceSetState('idle');
