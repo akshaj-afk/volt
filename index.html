@@ -8170,7 +8170,7 @@ const voice = {
   silenceTimer: null, raf: 0, audioCtx: null, stream: null, spokenUpTo: 0, audio: null,
   pending: '', interim: '', errorCount: 0,
   spoken: '', lastSpeechEnd: 0, fishWarned: false,
-  recorder: null, recording: false, recStart: 0, lastVoiceAt: 0, bargeSince: 0
+  recorder: null, recording: false, recStart: 0, lastVoiceAt: 0, bargeSince: 0, listenAt: 0
 };
 const VOICE_SILENCE_MS = 1100;
 /* While Kepler speaks, the mic can hear Kepler's own voice. Only a phrase this long counts as an interruption. */
@@ -8282,7 +8282,7 @@ function voiceVad(rms) {
     return;
   }
   if (!voice.recording) {
-    if (rms > VOICE_SPEECH_LEVEL) voiceStartRec();
+    if (rms > VOICE_SPEECH_LEVEL && Date.now() >= voice.listenAt) voiceStartRec();
     return;
   }
   if (rms > VOICE_SPEECH_LEVEL) voice.lastVoiceAt = now;
@@ -8341,6 +8341,14 @@ async function voiceTranscribe(blob) {
   }
   return String((await res.json()).text || '');
 }
+/* True when the words mostly repeat what Kepler just said. */
+function voiceIsEcho(text) {
+  const said = new Set(voice.spoken.toLowerCase().match(/[a-z']{4,}/g) || []);
+  const words = text.toLowerCase().match(/[a-z']{4,}/g) || [];
+  if (words.length < 2 || !said.size) return false;
+  const hits = words.filter(w => said.has(w)).length;
+  return hits / words.length >= 0.6;
+}
 async function voiceHandleClip(blob) {
   if (!voice.active || voice.muted) return;
   voiceSetState('thinking', 'Transcribing');
@@ -8348,6 +8356,7 @@ async function voiceHandleClip(blob) {
     const text = (await voiceTranscribe(blob)).trim();
     if (!voice.active) return;
     if (!text || WHISPER_JUNK.test(text)) { voiceSetState('listening'); return; }
+    if (Date.now() - voice.lastSpeechEnd < 15000 && voiceIsEcho(text)) { voiceSetState('listening'); return; }
     voiceClearError();
     voiceSend(text);
   } catch (e) {
@@ -8463,7 +8472,7 @@ async function voiceSpeakFish(text, mood, token, done) {
     const res = await fetch('/api/tts', {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, s ? { Authorization: 'Bearer ' + s.token } : {}),
-      body: JSON.stringify({ text, mood, voiceId: prefs.voiceId || '' })
+      body: JSON.stringify({ text, mood, voiceId: prefs.voiceId || FISH_DEFAULT_VOICE_ID })
     });
     if (res.status === 401) {
       voiceClose();
@@ -8541,25 +8550,39 @@ function voiceBarge() {
 function voiceAfterSpeech() {
   if (!voice.active || voice.muted) return;
   voice.speaking = false;
+  voice.listenAt = Date.now() + 1000;
   $('voiceMood').textContent = '';
   if (!voice.listening) voiceStartListening();
   voiceSetState('listening');
 }
 
 /* ---------- Voice choice ---------- */
+/* Fish Audio voices. Gojo Satoru is the default. */
+const FISH_DEFAULT_VOICE_ID = '7a1fb7ae8aa04fe1a5f9f63bd247d43b';
+const FISH_VOICES = [
+  { id: '7a1fb7ae8aa04fe1a5f9f63bd247d43b', title: 'Gojo Satoru' },
+  { id: '2e8a9a37ee024403a22318afbe70735b', title: 'Ryomen Sukuna' },
+  { id: '5a989a2c6f284d87b83b9c2fcf0deeb1', title: 'Monkey D. Luffy' },
+  { id: '4667172edbf24b81a4e759b85178339c', title: 'Kakashi' },
+  { id: '046178a0d26a4286b8e90d7a0285b982', title: 'Kenjaku' },
+  { id: 'a2bd39cc03df41499eaf2e28f872e03f', title: 'Nami' },
+  { id: '766be786bacf491ba80f58249289638f', title: 'Nobara' },
+  { id: 'a6d0aaaacc5346a3b5f94594d55226db', title: 'Julius Caesar' },
+  { id: 'eb4bcc6dbb634e9eaee239c94266935e', title: 'Roblox' },
+  { id: '9865ace7c74f473eb23531a53797109c', title: 'Octavius Caesar' },
+  { id: 'b11cbcf305ad47e5b6035cf80da69491', title: 'Tony Stark' },
+  { id: '16705566944a42b7b8b92352c6df9c31', title: 'Madara Uchiha' },
+  { id: 'fc7451fcfd6144dd8d6b32e2a30a79f5', title: 'Roronoa Zoro' },
+  { id: 'bfa726e2574340418440ad54c23fab32', title: 'Higuruma Hiromi' },
+  { id: 'd34183dcf4a041f5a82aa3dd19644329', title: 'Naruto' },
+  { id: 'f4beed29771c4fcc9a8f30e623209857', title: 'Red haired Shanks' }
+];
 let voiceListCache = null;
 async function voiceLoadList() {
-  if (voiceListCache) return { voices: voiceListCache };
-  try {
-    const data = await apiCall('/api/voices');
-    voiceListCache = Array.isArray(data.voices) ? data.voices : [];
-    return { voices: voiceListCache };
-  } catch (e) {
-    return { voices: [], error: e.message || 'Could not load voices.' };
-  }
+  return { voices: FISH_VOICES };
 }
 function voiceOptionsHTML(voices) {
-  return '<option value="">Default voice</option>' + voices.map(v => `<option value="${esc(v.id)}">${esc(v.title)}</option>`).join('');
+  return voices.map(v => `<option value="${esc(v.id)}">${esc(v.title)}</option>`).join('');
 }
 /* First-run picker. Resolves true when the user picks a voice, false when they cancel. */
 function voicePick() {
@@ -8572,7 +8595,7 @@ function voicePick() {
     dlg.showModal();
     voiceLoadList().then(({ voices, error }) => {
       sel.innerHTML = voiceOptionsHTML(voices);
-      sel.value = prefs.voiceId || '';
+      sel.value = prefs.voiceId || FISH_DEFAULT_VOICE_ID;
       if (error) msg.textContent = error + ' You can still use the default voice.';
     });
     $('voicePickOk').onclick = () => {
@@ -8591,7 +8614,7 @@ async function voiceFillModelSelect() {
   sel.innerHTML = '<option value="">Loading…</option>';
   const { voices, error } = await voiceLoadList();
   sel.innerHTML = voiceOptionsHTML(voices);
-  sel.value = prefs.voiceId || '';
+  sel.value = prefs.voiceId || FISH_DEFAULT_VOICE_ID;
   $('setVoiceModelNote').textContent = error ? error : '';
 }
 
