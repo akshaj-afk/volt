@@ -5466,6 +5466,7 @@ function providerName(model) {
   const id = String(model || '');
   if (id === AUTO_MODEL.id) return 'OpenRouter';
   if (id.startsWith('kilo:')) return 'Kilo';
+  if (id.startsWith('pollinations:')) return 'Pollinations';
   if (id.startsWith('ovh:')) return 'OVHcloud ' + id.slice(4);
   if (id === CATION_ID) return 'Cation';
   if (id.startsWith('webllm:') || WEBLLM_MODELS[id]) return 'the in-browser model';
@@ -5475,6 +5476,7 @@ function providerName(model) {
 function providerKey(model) {
   const id = String(model || '');
   if (id.startsWith('kilo:')) return 'kilo';
+  if (id.startsWith('pollinations:')) return 'pollinations';
   if (id.startsWith('ovh:')) return 'ovh';
   if (id === CATION_ID) return 'cation';
   if (id.startsWith('webllm:') || WEBLLM_MODELS[id]) return 'webllm';
@@ -5534,10 +5536,8 @@ function chainFailureError(failures) {
   return friendlyFailure(`Auto could not get an answer. Every provider it tried failed:\n\n${lines}\n\nWait a minute and try again, or choose a specific model from the list.`, withStatus ? withStatus.status : undefined);
 }
 function friendlyError(err, model) {
-  if (err?.friendly) return err.message;
-  if (err?.name === 'TypeError') return `Could not reach ${providerName(model)}. Check your internet connection and try again.`;
-  if (err?.status) return explainHttpFailure(err.status, err.message, providerName(model));
-  return err?.message || 'Something went wrong. Please try again.';
+  console.warn('Kepler request failed:', err?.message || err, 'model:', model || '(none)');
+  return "Couldn't generate a response. Please try again later.";
 }
 
 /* Next coding model to try when the current one is busy. Skips in-browser models and anything marked as gone. */
@@ -5566,6 +5566,7 @@ function cationMessages(list) {
 const OVH_GATEWAY_BASE = '/api/ovh?path=';
 const AUTO_CHAIN = [
   { model: 'kilo:kilo-auto/free', url: KILO_GATEWAY_BASE + 'chat/completions', wire: 'kilo-auto/free', limit: 20000 },
+  { model: 'pollinations:openai', url: '/api/pollinations', wire: 'openai', limit: 30000 },
   { model: 'ovh:Qwen3.5-9B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.5-9B', limit: 45000 },
   { model: 'ovh:Qwen3.6-27B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.6-27B', limit: 45000 },
   { model: AUTO_MODEL.id, url: '/api/chat', wire: AUTO_MODEL.id, limit: 30000 }
@@ -5574,7 +5575,7 @@ const AUTO_CHAIN = [
    next provider. A provider that just failed is skipped for a short cooldown so repeated messages do
    not keep hitting a provider that is down. The last provider is always tried so the chain never
    becomes empty. The first provider that answers is returned with the model that produced it. */
-const AUTO_COOLDOWN_MS = 3 * 60 * 1000;
+const AUTO_COOLDOWN_MS = 15 * 1000;
 const autoCooldown = new Map();
 async function autoChainFetch(reqMessages, parent, excludeKey = null, priorFailures = []) {
   let last = null;
@@ -8235,11 +8236,17 @@ function voiceStopLevelMeter() {
 /* Errors stay on screen until the next successful step, so they can be read. */
 function voiceError(msg) {
   const el = $('voiceErr');
-  el.textContent = msg;
+  if ([...el.children].some(p => p.textContent === msg)) { el.hidden = false; return; }
+  const line = document.createElement('div');
+  line.textContent = msg;
+  el.appendChild(line);
+  while (el.children.length > 3) el.firstChild.remove();
   el.hidden = false;
 }
 function voiceClearError() {
-  $('voiceErr').hidden = true;
+  const el = $('voiceErr');
+  el.innerHTML = '';
+  el.hidden = true;
 }
 
 /* Continuous recognition. Speech is kept on the voice object (not inside one recognizer session),
@@ -8285,11 +8292,10 @@ function voiceStartListening() {
     const heard = (fin + interim).trim();
     if (!heard) return;
     voice.errorCount = 0;
-    voiceClearError();
     /* Without barge-in enabled, nothing is heard while Kepler speaks. This stops it hearing itself. */
     if (voice.state === 'speaking' && prefs.voiceBargeIn !== true) return;
     /* Ignore Kepler's own voice, both while it speaks and just after it finishes. */
-    const justSpoke = voice.state === 'speaking' || Date.now() - voice.lastSpeechEnd < 1500;
+    const justSpoke = voice.state === 'speaking' || Date.now() - voice.lastSpeechEnd < 8000;
     if (justSpoke && voiceIsEcho(heard)) return;
     /* Kepler is working on a reply: keep listening, but do not queue new speech yet. */
     if (voice.state === 'thinking') return;
@@ -8298,6 +8304,7 @@ function voiceStartListening() {
       if (heard.split(/\s+/).length < VOICE_BARGE_WORDS) return;
       voiceBarge();
     }
+    voiceClearError();
     if (fin) voice.pending = (voice.pending + ' ' + fin).trim();
     voice.interim = interim.trim();
     voiceShowHeard((voice.pending + ' ' + voice.interim).trim());
@@ -8353,7 +8360,7 @@ function voiceStopListening() {
 /* Sends one spoken turn through the normal chat pipeline, so memory, skills and the model picker apply. */
 async function voiceSend(text) {
   clearTimeout(voice.silenceTimer);
-  voice.pending = ''; voice.interim = ''; voice.spoken = '';
+  voice.pending = ''; voice.interim = '';
   voice.utter++;
   voiceCancelSpeech();
   voice.queue = []; voice.speaking = false;
@@ -8389,7 +8396,7 @@ async function voiceSend(text) {
       assistantMsg.error = true;
       assistantMsg.content = `**Error:** ${msg}`;
       voiceError(msg);
-      voiceSpeak('Sorry, I could not get an answer. Check the message on screen.');
+      voiceSpeak(msg);
     }
   } finally {
     setBusy(false);
@@ -8432,7 +8439,7 @@ function voiceSpeak(text, moodFromText = true) {
     .replace(/\s+/g, ' ').trim();
   if (!clean || !voice.active || !('speechSynthesis' in window)) return;
   voice.queue.push({ text: clean, mood: moodFromText ? voiceMoodFor(clean) : null });
-  voice.spoken = (voice.spoken + ' ' + clean).slice(-2000);
+  voice.spoken = (voice.spoken + ' ' + clean).slice(-600);
   if (!voice.speaking) voiceDrain();
 }
 /* Stops whatever is speaking: a Fish Audio clip or the browser voice. */
@@ -8473,7 +8480,6 @@ async function voiceSpeakFish(text, mood, token, done) {
     audio.onended = finish;
     audio.onerror = finish;
     await audio.play();
-    voiceClearError();
     return true;
   } catch (e) {
     console.warn('Fish Audio voice failed:', e.message);
