@@ -8157,11 +8157,15 @@ if (session() && !justSignedIn) pullFromServer().catch(e => toast('Could not loa
 const voice = {
   active: false, state: 'idle', listening: false, muted: false,
   rec: null, queue: [], speaking: false, reply: null, utter: 0,
-  silenceTimer: null, raf: 0, audioCtx: null, stream: null, spokenUpTo: 0, audio: null
+  silenceTimer: null, raf: 0, audioCtx: null, stream: null, spokenUpTo: 0, audio: null,
+  pending: '', interim: '', errorCount: 0,
+  spoken: '', lastSpeechEnd: 0, fishWarned: false
 };
 const VOICE_SILENCE_MS = 1100;
 /* While Kepler speaks, the mic can hear Kepler's own voice. Only a phrase this long counts as an interruption. */
 const VOICE_BARGE_WORDS = 3;
+/* Microphone level below which the orb treats the sound as background noise. */
+const VOICE_NOISE_GATE = 0.03;
 
 function voiceSetState(s, label) {
   voice.state = s;
@@ -8183,7 +8187,10 @@ function voiceMoodFor(text) {
 /* Drives the orb from the microphone level. */
 async function voiceStartLevelMeter() {
   try {
-    voice.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    /* Ask the browser for its own noise suppression, echo cancellation and gain control. */
+    voice.stream = await navigator.mediaDevices.getUserMedia({
+      audio: { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
+    });
     voice.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const src = voice.audioCtx.createMediaStreamSource(voice.stream);
     const analyser = voice.audioCtx.createAnalyser();
@@ -8196,7 +8203,8 @@ async function voiceStartLevelMeter() {
       let sum = 0;
       for (const v of buf) { const d = (v - 128) / 128; sum += d * d; }
       const rms = Math.sqrt(sum / buf.length);
-      const level = 1 + Math.min(rms * 5, .45);
+      /* Ignore low-level background noise so the orb only reacts to speech. */
+      const level = rms > VOICE_NOISE_GATE ? 1 + Math.min(rms * 5, .45) : 1;
       $('voiceOrb').style.setProperty('--level', (voice.state === 'speaking' ? 1 + Math.sin(Date.now() / 120) * .04 : level).toFixed(3));
       voice.raf = requestAnimationFrame(tick);
     };
@@ -8215,7 +8223,32 @@ function voiceStopLevelMeter() {
   $('voiceOrb').style.setProperty('--level', 1);
 }
 
-/* Continuous recognition. Results are shown live; a pause of VOICE_SILENCE_MS sends the turn. */
+/* Continuous recognition. Speech is kept on the voice object (not inside one recognizer session),
+   so a session ending or restarting never drops what the user said. */
+function voiceShowHeard(text) {
+  $('voiceLive').textContent = text;
+  $('voiceLive').classList.add('you');
+}
+/* True when the heard words mostly repeat what Kepler just said (its own voice picked up by the mic). */
+function voiceIsEcho(heard) {
+  const said = new Set(voice.spoken.toLowerCase().match(/[a-z']{4,}/g) || []);
+  const words = (heard.toLowerCase().match(/[a-z']{4,}/g) || []);
+  if (words.length < 2 || !said.size) return false;
+  const hits = words.filter(w => said.has(w)).length;
+  return hits / words.length >= 0.6;
+}
+function voiceArmSilence() {
+  clearTimeout(voice.silenceTimer);
+  voice.silenceTimer = setTimeout(voiceFlushPending, VOICE_SILENCE_MS);
+}
+/* Sends whatever has been heard so far as one turn. */
+function voiceFlushPending() {
+  clearTimeout(voice.silenceTimer);
+  const text = (voice.pending + ' ' + voice.interim).trim();
+  voice.pending = '';
+  voice.interim = '';
+  if (text && voice.state !== 'thinking') voiceSend(text);
+}
 function voiceStartListening() {
   if (!voice.active || voice.muted || voice.listening) return;
   if (!SR) { toast('Voice conversation needs Chrome or Edge.'); return voiceClose(); }
@@ -8223,9 +8256,8 @@ function voiceStartListening() {
   rec.continuous = true;
   rec.interimResults = true;
   rec.lang = navigator.language || 'en-US';
-  let finalText = '';
   rec.onresult = e => {
-    let interim = '', fin = '';
+    let fin = '', interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       const t = e.results[i][0].transcript;
       if (e.results[i].isFinal) fin += t + ' ';
@@ -8233,38 +8265,59 @@ function voiceStartListening() {
     }
     const heard = (fin + interim).trim();
     if (!heard) return;
-    /* Kepler is working on a reply: ignore speech until it is ready. */
+    voice.errorCount = 0;
+    /* Ignore Kepler's own voice, both while it speaks and just after it finishes. */
+    const justSpoke = voice.state === 'speaking' || Date.now() - voice.lastSpeechEnd < 1500;
+    if (justSpoke && voiceIsEcho(heard)) return;
+    /* Kepler is working on a reply: keep listening, but do not queue new speech yet. */
     if (voice.state === 'thinking') return;
     if (voice.state === 'speaking') {
-      /* Short sounds are usually an echo of Kepler's own voice. A real phrase cuts Kepler off. */
+      /* Short sounds are usually an echo of Kepler's voice. A real phrase cuts Kepler off. */
       if (heard.split(/\s+/).length < VOICE_BARGE_WORDS) return;
       voiceBarge();
     }
-    finalText += fin;
-    $('voiceLive').textContent = (finalText + interim).trim();
-    $('voiceLive').classList.add('you');
+    if (fin) voice.pending = (voice.pending + ' ' + fin).trim();
+    voice.interim = interim.trim();
+    voiceShowHeard((voice.pending + ' ' + voice.interim).trim());
     voiceSetState('listening');
-    clearTimeout(voice.silenceTimer);
-    voice.silenceTimer = setTimeout(() => {
-      const text = finalText.trim();
-      finalText = '';
-      if (text) voiceSend(text);
-    }, VOICE_SILENCE_MS);
+    voiceArmSilence();
   };
   rec.onend = () => {
     voice.listening = false;
-    if (voice.active && !voice.muted) setTimeout(voiceStartListening, 150);
+    /* Send anything said before this session ended, so it is not lost. */
+    if (voice.pending || voice.interim) voiceFlushPending();
+    if (!voice.active || voice.muted) return;
+    /* Back off when recognition keeps failing, instead of restarting in a tight loop. */
+    const delay = Math.min(4000, 150 * Math.pow(2, Math.min(voice.errorCount, 5)));
+    setTimeout(voiceStartListening, delay);
   };
   rec.onerror = e => {
     voice.listening = false;
-    if (e.error === 'not-allowed') { toast('Microphone access was blocked.'); voiceClose(); }
+    voice.errorCount++;
+    const messages = {
+      'not-allowed': 'Microphone or speech recognition is blocked. Allow it in your browser settings.',
+      'service-not-allowed': 'Speech recognition is blocked by this browser. Try Chrome or Edge.',
+      'audio-capture': 'No microphone was found.',
+      'network': 'Speech recognition cannot reach its service. Check your internet connection.'
+    };
+    if (messages[e.error]) {
+      voiceSetState(voice.state, messages[e.error]);
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+        toast(messages[e.error]);
+        voiceClose();
+      }
+    }
   };
   try {
     rec.start();
     voice.rec = rec;
     voice.listening = true;
     if (voice.state === 'idle' || voice.state === 'paused') voiceSetState('listening');
-  } catch { /* already starting */ }
+  } catch (err) {
+    /* The browser still has a previous session open. Try again shortly. */
+    voice.listening = false;
+    if (voice.active && !voice.muted) setTimeout(voiceStartListening, 400);
+  }
 }
 function voiceStopListening() {
   clearTimeout(voice.silenceTimer);
@@ -8278,6 +8331,7 @@ function voiceStopListening() {
 /* Sends one spoken turn through the normal chat pipeline, so memory, skills and the model picker apply. */
 async function voiceSend(text) {
   clearTimeout(voice.silenceTimer);
+  voice.pending = ''; voice.interim = ''; voice.spoken = '';
   voice.utter++;
   voiceCancelSpeech();
   voice.queue = []; voice.speaking = false;
@@ -8355,6 +8409,7 @@ function voiceSpeak(text, moodFromText = true) {
     .replace(/\s+/g, ' ').trim();
   if (!clean || !voice.active || !('speechSynthesis' in window)) return;
   voice.queue.push({ text: clean, mood: moodFromText ? voiceMoodFor(clean) : null });
+  voice.spoken = (voice.spoken + ' ' + clean).slice(-2000);
   if (!voice.speaking) voiceDrain();
 }
 /* Stops whatever is speaking: a Fish Audio clip or the browser voice. */
@@ -8378,7 +8433,11 @@ async function voiceSpeakFish(text, mood, token, done) {
       openAuth('signin');
       return true;
     }
-    if (!res.ok) throw new Error('tts ' + res.status);
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { msg = (await res.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
     const url = URL.createObjectURL(await res.blob());
     if (token !== voice.utter) { URL.revokeObjectURL(url); return true; }
     const audio = new Audio(url);
@@ -8393,11 +8452,17 @@ async function voiceSpeakFish(text, mood, token, done) {
     await audio.play();
     return true;
   } catch (e) {
+    console.warn('Fish Audio voice failed:', e.message);
+    if (!voice.fishWarned) {
+      voice.fishWarned = true;
+      toast('Fish Audio: ' + e.message + ' Using the browser voice.');
+    }
     return false;
   }
 }
 /* Browser voice, used when Fish Audio is unavailable. */
 function voiceSpeakBrowser(next, token, done) {
+  $('voiceMood').textContent = 'Browser voice';
   const u = new SpeechSynthesisUtterance(next.text);
   const chosen = voices.find(v => v.voiceURI === prefs.voice) || voices.find(v => /en/i.test(v.lang));
   if (chosen) u.voice = chosen;
@@ -8410,6 +8475,7 @@ function voiceDrain() {
   const next = voice.queue.shift();
   if (!next) {
     voice.speaking = false;
+    voice.lastSpeechEnd = Date.now();
     if (voice.active && !voice.reply) voiceAfterSpeech();
     return;
   }
