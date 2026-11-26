@@ -2990,6 +2990,61 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
   .pv-ver button { padding: 4px 8px; }
   .pv-ver button:disabled { opacity: .35; cursor: default; }
   #panel.full { position: fixed !important; inset: 12px !important; width: auto !important; max-width: none !important; z-index: 80; }
+
+/* ---------- Voice conversation ---------- */
+.voice-btn { color: var(--muted); }
+.voice-overlay {
+  position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between; padding: 40px 24px 36px;
+  background: radial-gradient(ellipse at 50% 40%, rgba(var(--accent-rgb), .14), transparent 65%), var(--bg);
+  animation: fade .25s ease;
+}
+.voice-overlay[hidden] { display: none; }
+.voice-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; max-width: 620px; width: 100%; }
+.voice-orb {
+  position: relative; width: 170px; height: 170px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(var(--accent-rgb), .9), rgba(var(--accent-rgb), .35) 60%, rgba(var(--accent-rgb), .08));
+  box-shadow: 0 0 60px rgba(var(--accent-rgb), .35);
+  transform: scale(var(--level, 1)); transition: transform .08s linear;
+}
+.voice-orb span { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(var(--accent-rgb), .5); opacity: 0; }
+.voice-orb[data-state="listening"] span, .voice-orb[data-state="speaking"] span { animation: voice-ring 2s ease-out infinite; }
+.voice-orb[data-state="listening"] span:nth-child(2), .voice-orb[data-state="speaking"] span:nth-child(2) { animation-delay: .6s; }
+.voice-orb[data-state="listening"] span:nth-child(3), .voice-orb[data-state="speaking"] span:nth-child(3) { animation-delay: 1.2s; }
+.voice-orb[data-state="thinking"] { animation: voice-pulse 1.2s ease-in-out infinite; }
+.voice-orb[data-state="idle"] { opacity: .75; }
+@keyframes voice-ring { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.8); opacity: 0; } }
+@keyframes voice-pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+.voice-state { font-size: 15px; font-weight: 600; color: var(--text-2); }
+.voice-live { min-height: 60px; font-family: var(--font-serif); font-size: 19px; line-height: 1.5; color: var(--text); max-width: 56ch; }
+.voice-live.you { color: var(--muted); font-size: 16px; }
+.voice-mood { font: 600 11px/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); min-height: 14px; }
+.voice-controls { display: flex; gap: 16px; }
+.voice-ctl {
+  width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text); display: grid; place-items: center; cursor: pointer;
+}
+.voice-ctl svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.voice-ctl.off { background: var(--danger); border-color: var(--danger); color: #fff; }
+.voice-end { background: var(--text); color: var(--bg); border-color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .voice-orb, .voice-orb span { animation: none !important; } }
+
+/* Compact voice bar: a small floating bar instead of the full-screen view */
+.voice-overlay.compact {
+  inset: auto; left: 50%; bottom: 16px; transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px)); padding: 12px 14px;
+  flex-direction: row; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px;
+  box-shadow: var(--shadow-lg); animation: rise .25s ease;
+}
+.voice-overlay.compact .voice-orb { display: none; }
+.voice-overlay.compact .voice-stage { flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; min-width: 0; max-width: none; }
+.voice-overlay.compact .voice-state { font-size: 13px; }
+.voice-overlay.compact .voice-live { font-size: 14px; min-height: 0; line-height: 1.4; max-height: 3.8em; overflow: hidden; max-width: none; }
+.voice-overlay.compact .voice-mood { display: none; }
+.voice-overlay.compact .voice-controls { gap: 8px; flex-shrink: 0; }
+.voice-overlay.compact .voice-ctl { width: 40px; height: 40px; }
+.voice-overlay.compact .voice-ctl svg { width: 18px; height: 18px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
@@ -3127,7 +3182,10 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
               <div class="state-pills" id="statePills"></div>
             </div>
             <div class="tools">
-              <button class="circle mic" id="micBtn" title="Voice input" aria-label="Voice input">
+                            <button class="circle voice-btn" id="voiceBtn" title="Voice conversation" aria-label="Voice conversation">
+                <svg viewBox="0 0 24 24"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/></svg>
+              </button>
+<button class="circle mic" id="micBtn" title="Voice input" aria-label="Voice input">
                 <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
               </button>
               <button class="circle send" id="sendBtn" title="Send" aria-label="Send">
@@ -3270,6 +3328,11 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
 
     <section>
       <div class="set-label">Voice</div>
+      <div class="set-row"><span>Compact voice bar<span class="sub">A small bar at the bottom instead of the full-screen view</span></span>
+        <span class="switch"><input type="checkbox" id="setVoiceCompact" /><span class="slider"></span></span>
+      </div>
+      <label class="set-field">Kepler's voice (Fish Audio)<select class="select-wide" id="setVoiceModel"><option value="">Default voice</option></select></label>
+      <p class="set-note" id="setVoiceModelNote"></p>
       <label class="set-field">Read replies with<select class="select-wide" id="setVoice"><option value="">Browser default</option></select></label>
       <div class="set-row"><span>Speaking speed</span>
         <span style="display:inline-flex;align-items:center;gap:10px"><input type="range" id="setRate" min="0.6" max="1.6" step="0.1" /><b class="set-num" id="rateVal">1.0</b></span>
@@ -3379,6 +3442,14 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
     .auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
     .auth-legal { margin: 14px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
   </style>
+  <style>
+    #authDialog .auth-x { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--muted); padding: 0; }
+    #authDialog .auth-x:hover { background: var(--hover); color: var(--text); }
+    #authDialog .auth-x svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+  <button type="button" class="auth-x" id="authClose" aria-label="Close sign in" title="Close">
+    <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
   <div class="auth-tabs" id="authTabs" role="tablist">
     <button type="button" role="tab" id="authTabIn" aria-selected="true">Sign in</button>
     <button type="button" role="tab" id="authTabUp" aria-selected="false">Create account</button>
@@ -3398,6 +3469,33 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
     <button id="authNext" type="button" class="primary">Send code</button>
   </div>
   <p class="auth-legal">Chats sync to your account only while you are signed in. Signing out keeps them on this device.</p>
+</dialog>
+<div class="voice-overlay" id="voiceOverlay" hidden aria-live="polite">
+  <div class="voice-stage">
+    <div class="voice-orb" id="voiceOrb" data-state="idle"><span></span><span></span><span></span></div>
+    <div class="voice-state" id="voiceState">Tap to start talking</div>
+    <div class="voice-live" id="voiceLive"></div>
+    <div class="voice-mood" id="voiceMood"></div>
+  </div>
+  <div class="voice-controls">
+    <button class="voice-ctl" id="voiceMute" title="Mute microphone" aria-label="Mute microphone">
+      <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+    <button class="voice-ctl voice-end" id="voiceEnd" title="End voice" aria-label="End voice">
+      <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+</div>
+<dialog id="voicePickDialog" class="sheet" aria-label="Choose a voice">
+  <h3>Choose a voice</h3>
+  <p class="cf-body">Pick the voice Kepler uses to speak. You can change it later in Settings.</p>
+  <label class="set-field">Voice<select class="select-wide" id="voicePickSelect"><option value="">Default voice</option></select></label>
+  <p class="set-note" id="voicePickMsg"></p>
+  <div class="sheet-actions">
+    <button id="voicePickCancel" type="button">Cancel</button>
+    <span class="spacer"></span>
+    <button id="voicePickOk" type="button" class="primary">Use this voice</button>
+  </div>
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="menu-pop" id="menuPop" hidden></div>
@@ -3924,6 +4022,7 @@ const CLI_HELP = [
   [':files', 'List code files from this session.'],
   [':save <number|name>', 'Download a code file, e.g. :save 1.'],
   [':export md|html|json', 'Download the current chat.'],
+  [':voice', 'Hands-free voice in a small bar. Mute or end it from the bar.'],
   [':settings', 'Open settings.'],
   [':gui', 'Switch back to the chat interface.']
 ];
@@ -4062,6 +4161,7 @@ function runCliCommand(raw) {
       return toast('Saved ' + f.name);
     }
     case 'export': return exportChat(['md', 'html', 'json'].includes(arg.toLowerCase()) ? arg.toLowerCase() : 'md');
+    case 'voice': return voiceOpen(true);
     case 'settings': return openSettings();
     case 'gui': case 'exit': return toggleCli();
     default: return toast(`Unknown command :${cmd}. Type :help for the list.`);
@@ -6883,6 +6983,7 @@ function openSettings() {
   renderMemory();
   renderStats();
   fillVoices();
+  voiceFillModelSelect();
   updateStorageInfo();
   settingsDialog.showModal();
 }
@@ -6908,6 +7009,14 @@ $('setVoice').addEventListener('change', e => { prefs.voice = e.target.value; pe
 $('setSearxng').value = prefs.searxng || '';
 $('setSearxng').addEventListener('change', e => { prefs.searxng = e.target.value.trim().replace(/\/+$/, ''); persist(); toast(prefs.searxng ? 'SearXNG saved.' : 'SearXNG cleared.'); });
 $('testVoice').addEventListener('click', () => speak('Hello, this is how I will read answers aloud to you.', true));
+$('setVoiceCompact').checked = prefs.voiceCompact === true;
+$('setVoiceModel').addEventListener('change', e => {
+  prefs.voiceId = e.target.value;
+  prefs.voiceChosen = true;
+  persist();
+  toast(e.target.value ? 'Kepler will use the new voice.' : 'Kepler will use the default voice.');
+});
+$('setVoiceCompact').addEventListener('change', e => { prefs.voiceCompact = e.target.checked; persist(); });
 
 /* Memory: short facts the model keeps across every chat */
 function renderMemory() {
@@ -8011,6 +8120,7 @@ $('accountBtn').addEventListener('click', () => (session() ? signOut() : openAut
 $('authNext').addEventListener('click', authNext);
 $('authBack').addEventListener('click', () => authStep(1));
 $('authCancel').addEventListener('click', () => $('authDialog').close());
+$('authClose').addEventListener('click', () => $('authDialog').close());
 $('authTabIn').addEventListener('click', () => setAuthMode('signin'));
 $('authTabUp').addEventListener('click', () => setAuthMode('signup'));
 $('authGithub').addEventListener('click', startGithubAuth);
@@ -8039,6 +8149,392 @@ persist();
 loadProjectSnapshots();
 const justSignedIn = consumeAuthFragment();
 if (session() && !justSignedIn) pullFromServer().catch(e => toast('Could not load your saved chats: ' + e.message));
+
+/* ============================ VOICE CONVERSATION ============================ */
+/* Hands-free voice mode. The mic stays on while Kepler speaks, so the user can cut in (barge-in).
+   Each finished phrase is sent after a short pause and goes through the normal chat pipeline.
+   Replies are spoken sentence by sentence as they stream. */
+const voice = {
+  active: false, state: 'idle', listening: false, muted: false,
+  rec: null, queue: [], speaking: false, reply: null, utter: 0,
+  silenceTimer: null, raf: 0, audioCtx: null, stream: null, spokenUpTo: 0, audio: null
+};
+const VOICE_SILENCE_MS = 1100;
+/* While Kepler speaks, the mic can hear Kepler's own voice. Only a phrase this long counts as an interruption. */
+const VOICE_BARGE_WORDS = 3;
+
+function voiceSetState(s, label) {
+  voice.state = s;
+  $('voiceOrb').dataset.state = s;
+  $('voiceState').textContent = label || ({
+    idle: 'Tap to start talking', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking', paused: 'Muted'
+  })[s] || s;
+}
+
+/* Delivery settings for the browser voice, picked from the reply text. */
+function voiceMoodFor(text) {
+  const t = text.toLowerCase();
+  if (/sorry|unfortunately|sad|loss|difficult|hard time|worried/.test(t)) return { label: 'Gentle', rate: .9, pitch: .92 };
+  if (/!|great|awesome|congrat|excited|love that|amazing|wow/.test(t)) return { label: 'Upbeat', rate: 1.08, pitch: 1.1 };
+  if (/warning|careful|danger|important|must|critical/.test(t)) return { label: 'Serious', rate: .95, pitch: .96 };
+  return { label: 'Calm', rate: 1, pitch: 1 };
+}
+
+/* Drives the orb from the microphone level. */
+async function voiceStartLevelMeter() {
+  try {
+    voice.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    voice.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = voice.audioCtx.createMediaStreamSource(voice.stream);
+    const analyser = voice.audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    src.connect(analyser);
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    const tick = () => {
+      if (!voice.active) return;
+      analyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (const v of buf) { const d = (v - 128) / 128; sum += d * d; }
+      const rms = Math.sqrt(sum / buf.length);
+      const level = 1 + Math.min(rms * 5, .45);
+      $('voiceOrb').style.setProperty('--level', (voice.state === 'speaking' ? 1 + Math.sin(Date.now() / 120) * .04 : level).toFixed(3));
+      voice.raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return true;
+  } catch (e) {
+    toast('Microphone access was blocked. Allow it in your browser settings.');
+    return false;
+  }
+}
+function voiceStopLevelMeter() {
+  cancelAnimationFrame(voice.raf);
+  voice.stream?.getTracks().forEach(t => t.stop());
+  voice.audioCtx?.close().catch(() => {});
+  voice.stream = null; voice.audioCtx = null;
+  $('voiceOrb').style.setProperty('--level', 1);
+}
+
+/* Continuous recognition. Results are shown live; a pause of VOICE_SILENCE_MS sends the turn. */
+function voiceStartListening() {
+  if (!voice.active || voice.muted || voice.listening) return;
+  if (!SR) { toast('Voice conversation needs Chrome or Edge.'); return voiceClose(); }
+  const rec = new SR();
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = navigator.language || 'en-US';
+  let finalText = '';
+  rec.onresult = e => {
+    let interim = '', fin = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) fin += t + ' ';
+      else interim += t;
+    }
+    const heard = (fin + interim).trim();
+    if (!heard) return;
+    /* Kepler is working on a reply: ignore speech until it is ready. */
+    if (voice.state === 'thinking') return;
+    if (voice.state === 'speaking') {
+      /* Short sounds are usually an echo of Kepler's own voice. A real phrase cuts Kepler off. */
+      if (heard.split(/\s+/).length < VOICE_BARGE_WORDS) return;
+      voiceBarge();
+    }
+    finalText += fin;
+    $('voiceLive').textContent = (finalText + interim).trim();
+    $('voiceLive').classList.add('you');
+    voiceSetState('listening');
+    clearTimeout(voice.silenceTimer);
+    voice.silenceTimer = setTimeout(() => {
+      const text = finalText.trim();
+      finalText = '';
+      if (text) voiceSend(text);
+    }, VOICE_SILENCE_MS);
+  };
+  rec.onend = () => {
+    voice.listening = false;
+    if (voice.active && !voice.muted) setTimeout(voiceStartListening, 150);
+  };
+  rec.onerror = e => {
+    voice.listening = false;
+    if (e.error === 'not-allowed') { toast('Microphone access was blocked.'); voiceClose(); }
+  };
+  try {
+    rec.start();
+    voice.rec = rec;
+    voice.listening = true;
+    if (voice.state === 'idle' || voice.state === 'paused') voiceSetState('listening');
+  } catch { /* already starting */ }
+}
+function voiceStopListening() {
+  clearTimeout(voice.silenceTimer);
+  voice.listening = false;
+  if (voice.rec) {
+    voice.rec.onend = null;
+    try { voice.rec.stop(); } catch {}
+  }
+}
+
+/* Sends one spoken turn through the normal chat pipeline, so memory, skills and the model picker apply. */
+async function voiceSend(text) {
+  clearTimeout(voice.silenceTimer);
+  voice.utter++;
+  voiceCancelSpeech();
+  voice.queue = []; voice.speaking = false;
+  $('voiceLive').textContent = text;
+  $('voiceLive').classList.add('you');
+  voiceSetState('thinking');
+  $('voiceMood').textContent = '';
+  if (guestLimitReached()) { toast('Sign in to keep chatting.'); return voiceClose(); }
+  const c = ensureCurrent();
+  if (!signedIn()) localStorage.setItem(GUEST_KEY, String(guestUsed() + 1));
+  if (c.messages.length === 0) c.title = titleFor(text);
+  const now = Date.now();
+  c.messages.push({ role: 'user', content: text, shown: text, ts: now });
+  const assistantMsg = { role: 'assistant', content: '', reasoning: '', ts: now };
+  c.messages.push(assistantMsg);
+  c.updated = Date.now();
+  persist();
+  voice.reply = assistantMsg;
+  voice.spokenUpTo = 0;
+  setBusy(true);
+  renderAll(false);
+  try {
+    await streamInto(assistantMsg, null, {
+      onDelta: () => voiceFlushSentences(assistantMsg, false)
+    });
+    voiceFlushSentences(assistantMsg, true);
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      /* Stopped by barge-in or Escape. */
+      assistantMsg.content = assistantMsg.content || '_Stopped._';
+    } else {
+      const msg = friendlyError(err, assistantMsg.model);
+      assistantMsg.error = true;
+      assistantMsg.content = `**Error:** ${msg}`;
+      voiceSpeak(msg);
+    }
+  } finally {
+    setBusy(false);
+    abortCtrl = null;
+    harvestMemory(assistantMsg);
+    c.updated = Date.now();
+    persist();
+    renderAll(false);
+  }
+  voice.reply = null;
+  if (!voice.active) return;
+  if (!voice.speaking && voice.queue.length === 0) voiceAfterSpeech();
+}
+
+/* Speaks each complete sentence as it streams in, so the answer starts before it is finished. */
+function voiceFlushSentences(msg, final) {
+  const text = (msg.content || '').slice(voice.spokenUpTo);
+  const re = /[^.!?\n]+[.!?]+(\s|$)|\n+/g;
+  let m, consumed = 0;
+  while ((m = re.exec(text))) {
+    const sentence = m[0].trim();
+    consumed = m.index + m[0].length;
+    if (sentence && !/^```/.test(sentence)) voiceSpeak(sentence);
+  }
+  if (final) {
+    const rest = text.slice(consumed).trim();
+    if (rest && !/^```/.test(rest)) voiceSpeak(rest);
+    consumed = text.length;
+  }
+  voice.spokenUpTo += consumed;
+  if (voice.active && voice.reply) voiceSetState(voice.speaking ? 'speaking' : 'thinking');
+}
+
+/* Speech layer: browser voices now. Replace the body with a server TTS call to add emotional voices. */
+function voiceSpeak(text, moodFromText = true) {
+  const clean = text
+    .replace(/```[\s\S]*?```/g, ' code omitted. ')
+    .replace(/[*_#`>~|]/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\s+/g, ' ').trim();
+  if (!clean || !voice.active || !('speechSynthesis' in window)) return;
+  voice.queue.push({ text: clean, mood: moodFromText ? voiceMoodFor(clean) : null });
+  if (!voice.speaking) voiceDrain();
+}
+/* Stops whatever is speaking: a Fish Audio clip or the browser voice. */
+function voiceCancelSpeech() {
+  voice.utter++;
+  if (voice.audio) { try { voice.audio.pause(); } catch {} voice.audio = null; }
+  speechSynthesis.cancel();
+}
+/* Fish Audio, through /api/tts. Resolves true if it started playing, false so the caller can fall back. */
+async function voiceSpeakFish(text, mood, token, done) {
+  try {
+    const s = session();
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, s ? { Authorization: 'Bearer ' + s.token } : {}),
+      body: JSON.stringify({ text, mood, voiceId: prefs.voiceId || '' })
+    });
+    if (res.status === 401) {
+      voiceClose();
+      toast('Sign in to use voice.');
+      openAuth('signin');
+      return true;
+    }
+    if (!res.ok) throw new Error('tts ' + res.status);
+    const url = URL.createObjectURL(await res.blob());
+    if (token !== voice.utter) { URL.revokeObjectURL(url); return true; }
+    const audio = new Audio(url);
+    voice.audio = audio;
+    const finish = () => {
+      URL.revokeObjectURL(url);
+      if (voice.audio === audio) voice.audio = null;
+      if (token === voice.utter) done();
+    };
+    audio.onended = finish;
+    audio.onerror = finish;
+    await audio.play();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+/* Browser voice, used when Fish Audio is unavailable. */
+function voiceSpeakBrowser(next, token, done) {
+  const u = new SpeechSynthesisUtterance(next.text);
+  const chosen = voices.find(v => v.voiceURI === prefs.voice) || voices.find(v => /en/i.test(v.lang));
+  if (chosen) u.voice = chosen;
+  u.rate = (prefs.rate || 1) * (next.mood?.rate ?? 1);
+  u.pitch = next.mood?.pitch ?? 1;
+  u.onend = u.onerror = () => { if (token === voice.utter) done(); };
+  speechSynthesis.speak(u);
+}
+function voiceDrain() {
+  const next = voice.queue.shift();
+  if (!next) {
+    voice.speaking = false;
+    if (voice.active && !voice.reply) voiceAfterSpeech();
+    return;
+  }
+  voice.speaking = true;
+  voiceSetState('speaking');
+  /* Keep the mic on while speaking, so the user can interrupt. */
+  if (!voice.listening && !voice.muted) voiceStartListening();
+  if (next.mood) $('voiceMood').textContent = next.mood.label;
+  const token = ++voice.utter;
+  const done = () => voiceDrain();
+  voiceSpeakFish(next.text, next.mood?.label || 'Calm', token, done).then(ok => {
+    if (!ok && token === voice.utter) voiceSpeakBrowser(next, token, done);
+  });
+}
+/* Barge-in: the user cut in, so stop the voice and the reply, then listen. */
+function voiceBarge() {
+  voice.utter++;
+  voice.queue = [];
+  voiceCancelSpeech();
+  voice.speaking = false;
+  if (voice.reply && abortCtrl) abortCtrl.abort();
+  voiceSetState('listening');
+}
+function voiceAfterSpeech() {
+  if (!voice.active || voice.muted) return;
+  voice.speaking = false;
+  $('voiceMood').textContent = '';
+  if (!voice.listening) voiceStartListening();
+  voiceSetState('listening');
+}
+
+/* ---------- Voice choice ---------- */
+let voiceListCache = null;
+async function voiceLoadList() {
+  if (voiceListCache) return { voices: voiceListCache };
+  try {
+    const data = await apiCall('/api/voices');
+    voiceListCache = Array.isArray(data.voices) ? data.voices : [];
+    return { voices: voiceListCache };
+  } catch (e) {
+    return { voices: [], error: e.message || 'Could not load voices.' };
+  }
+}
+function voiceOptionsHTML(voices) {
+  return '<option value="">Default voice</option>' + voices.map(v => `<option value="${esc(v.id)}">${esc(v.title)}</option>`).join('');
+}
+/* First-run picker. Resolves true when the user picks a voice, false when they cancel. */
+function voicePick() {
+  return new Promise(resolve => {
+    const dlg = $('voicePickDialog');
+    const sel = $('voicePickSelect');
+    const msg = $('voicePickMsg');
+    sel.innerHTML = '<option value="">Loading voices…</option>';
+    msg.textContent = '';
+    dlg.showModal();
+    voiceLoadList().then(({ voices, error }) => {
+      sel.innerHTML = voiceOptionsHTML(voices);
+      sel.value = prefs.voiceId || '';
+      if (error) msg.textContent = error + ' You can still use the default voice.';
+    });
+    $('voicePickOk').onclick = () => {
+      prefs.voiceId = sel.value;
+      prefs.voiceChosen = true;
+      persist();
+      dlg.close();
+      resolve(true);
+    };
+    $('voicePickCancel').onclick = () => { dlg.close(); resolve(false); };
+    dlg.onclose = () => resolve(false);
+  });
+}
+async function voiceFillModelSelect() {
+  const sel = $('setVoiceModel');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  const { voices, error } = await voiceLoadList();
+  sel.innerHTML = voiceOptionsHTML(voices);
+  sel.value = prefs.voiceId || '';
+  $('setVoiceModelNote').textContent = error ? error : '';
+}
+
+async function voiceOpen(compact = !!prefs.voiceCompact) {
+  if (!signedIn()) { toast('Sign in to use voice.'); return openAuth('signin'); }
+  if (!prefs.voiceChosen) {
+    const picked = await voicePick();
+    if (!picked) return;
+  }
+  if (!SR) return toast('Voice conversation needs Chrome or Edge.');
+  if (!('speechSynthesis' in window)) return toast('This browser cannot read replies aloud.');
+  voice.active = true;
+  voice.muted = false;
+  $('voiceMute').classList.remove('off');
+  $('voiceOverlay').hidden = false;
+  $('voiceOverlay').classList.toggle('compact', compact === true);
+  $('voiceLive').textContent = '';
+  $('voiceLive').classList.remove('you');
+  $('voiceMood').textContent = '';
+  if (!voices.length) fillVoices();
+  voiceSetState('idle');
+  const ok = await voiceStartLevelMeter();
+  if (!ok) return voiceClose();
+  voiceStartListening();
+}
+function voiceClose() {
+  voice.active = false;
+  voice.utter++;
+  voiceStopListening();
+  voiceCancelSpeech();
+  voice.queue = []; voice.speaking = false;
+  if (voice.reply) { abortCtrl?.abort(); voice.reply = null; }
+  voiceStopLevelMeter();
+  $('voiceOverlay').hidden = true;
+  $('voiceLive').textContent = '';
+  renderAll(false);
+}
+function voiceToggleMute() {
+  voice.muted = !voice.muted;
+  $('voiceMute').classList.toggle('off', voice.muted);
+  if (voice.muted) { voiceStopListening(); voiceSetState('paused'); }
+  else voiceStartListening();
+}
+
+$('voiceBtn').addEventListener('click', () => voiceOpen());
+$('voiceEnd').addEventListener('click', voiceClose);
+$('voiceMute').addEventListener('click', voiceToggleMute);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && voice.active) voiceClose(); });
 </script>
 </body>
 </html>
