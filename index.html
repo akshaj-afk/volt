@@ -3328,6 +3328,9 @@ html:not([data-mode="cli"]) .home-hero p { margin: 0 auto; max-width: 52ch; text
 
     <section>
       <div class="set-label">Voice</div>
+      <div class="set-row"><span>Interrupt Kepler by talking<span class="sub">Use headphones. Without them, Kepler can hear its own voice</span></span>
+        <span class="switch"><input type="checkbox" id="setVoiceBarge" /><span class="slider"></span></span>
+      </div>
       <div class="set-row"><span>Compact voice bar<span class="sub">A small bar at the bottom instead of the full-screen view</span></span>
         <span class="switch"><input type="checkbox" id="setVoiceCompact" /><span class="slider"></span></span>
       </div>
@@ -5590,7 +5593,7 @@ async function autoChainFetch(reqMessages, parent, excludeKey = null, priorFailu
       const body = {
         model: p.wire,
         stream: true,
-        reasoning: prefs.thinking === true ? { effort: 'high' } : { enabled: false },
+        ...(prefs.thinking === true ? { reasoning: { effort: 'high' } } : {}),
         ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
         messages: reqMessages
       };
@@ -5683,7 +5686,7 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
     res = await viaProvider(KILO_GATEWAY_BASE + 'chat/completions', {
       model: useModel.slice('kilo:'.length),
       stream: true,
-      reasoning: prefs.thinking === true ? { effort: 'high' } : { enabled: false },
+      ...(prefs.thinking === true ? { reasoning: { effort: 'high' } } : {}),
       ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
       messages: reqMessages
     });
@@ -5691,7 +5694,7 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
     res = await viaProvider('/api/chat', {
       model: useModel,
       stream: true,
-      reasoning: prefs.thinking === true ? { effort: 'high' } : { enabled: false },
+      ...(prefs.thinking === true ? { reasoning: { effort: 'high' } } : {}),
       ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
       messages: reqMessages
     });
@@ -7010,6 +7013,8 @@ $('setSearxng').value = prefs.searxng || '';
 $('setSearxng').addEventListener('change', e => { prefs.searxng = e.target.value.trim().replace(/\/+$/, ''); persist(); toast(prefs.searxng ? 'SearXNG saved.' : 'SearXNG cleared.'); });
 $('testVoice').addEventListener('click', () => speak('Hello, this is how I will read answers aloud to you.', true));
 $('setVoiceCompact').checked = prefs.voiceCompact === true;
+$('setVoiceBarge').checked = prefs.voiceBargeIn === true;
+$('setVoiceBarge').addEventListener('change', e => { prefs.voiceBargeIn = e.target.checked; persist(); });
 $('setVoiceModel').addEventListener('change', e => {
   prefs.voiceId = e.target.value;
   prefs.voiceChosen = true;
@@ -8266,6 +8271,8 @@ function voiceStartListening() {
     const heard = (fin + interim).trim();
     if (!heard) return;
     voice.errorCount = 0;
+    /* Without barge-in enabled, nothing is heard while Kepler speaks. This stops it hearing itself. */
+    if (voice.state === 'speaking' && prefs.voiceBargeIn !== true) return;
     /* Ignore Kepler's own voice, both while it speaks and just after it finishes. */
     const justSpoke = voice.state === 'speaking' || Date.now() - voice.lastSpeechEnd < 1500;
     if (justSpoke && voiceIsEcho(heard)) return;
@@ -8366,7 +8373,7 @@ async function voiceSend(text) {
       const msg = friendlyError(err, assistantMsg.model);
       assistantMsg.error = true;
       assistantMsg.content = `**Error:** ${msg}`;
-      voiceSpeak(msg);
+      voiceSpeak('Sorry, I could not get an answer. Check the message on screen.');
     }
   } finally {
     setBusy(false);
