@@ -8323,7 +8323,7 @@ async function voiceTranscribe(blob) {
     r.readAsDataURL(blob);
   });
   const s = session();
-  const res = await fetch('/api/stt', {
+  const res = await fetch('/api/voice?action=stt', {
     method: 'POST',
     headers: Object.assign({ 'Content-Type': 'application/json' }, s ? { Authorization: 'Bearer ' + s.token } : {}),
     body: JSON.stringify({ audio, mime: blob.type })
@@ -8469,7 +8469,7 @@ function voiceCancelSpeech() {
 async function voiceSpeakFish(text, mood, token, done) {
   try {
     const s = session();
-    const res = await fetch('/api/tts', {
+    const res = await fetch('/api/voice?action=tts', {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, s ? { Authorization: 'Bearer ' + s.token } : {}),
       body: JSON.stringify({ text, mood, voiceId: prefs.voiceId || FISH_DEFAULT_VOICE_ID })
