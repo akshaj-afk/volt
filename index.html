@@ -3588,7 +3588,7 @@ function buildSystemPrompt() {
   const hasProjectFolder = !!(activeProject && activeProject.folderLinked);
   p += prefs.thinking === true
     ? `\n\nResponse mode: Thinking is ON. Reason carefully, work through problems step by step, and give thorough, detailed answers with full explanations and examples.`
-    : `\n\nResponse mode: Thinking is OFF. Do not overthink. Keep your reasoning brief, answer directly, and keep answers concise unless the user asks for detail.`;
+    : `\n\nResponse mode: Thinking is OFF. Do not show your reasoning, plans or preambles. Give the answer directly, in as few words as the question needs, unless the user asks for detail.`;
   p += hasProjectFolder
     ? `\n\nProject file edits: Change existing files with standard unified diffs in \`\`\`diff blocks, one patch covering the changed paths. Include exact \`--- a/path\` and \`+++ b/path\` headers, enough unchanged context to match safely, and only the changed lines. Do not output complete replacement copies of existing files. Add a new file only when the project truly needs one; put only that new file's complete contents in a separately named code block.`
     : `\n\nFiles: Whenever you write code, a script, markup, a config, or any data file, put its full contents in a fenced code block that names the file, for example \`\`\`python app.py, \`\`\`javascript utils.js, or \`\`\`markdown report.md. Every code block is saved as a file the user can download, so always give a real filename and always give complete, runnable contents.`;
@@ -3658,6 +3658,8 @@ const MODELS = [AUTO_MODEL];
 /* MANEX's Cation agent. Its API key lives on the server (api/cation.js), never in this page. */
 const CATION_ID = 'cation';
 const CATION_MODEL = { group: 'Agents', id: CATION_ID, name: 'Cation (MANEX)' };
+/* LLM7 (llm7.io): a free OpenAI-compatible model, served through api/llm7.js. */
+const LLM7_MODEL = { group: 'Free providers', id: 'llm7:default', name: 'LLM7' };
 
 function groupForModel(m) {
   const s = (m.id + ' ' + (m.name || '')).toLowerCase();
@@ -3741,7 +3743,7 @@ function visibleModels() { return freeCatalog; }
 const isCodingModel = m => /coder|coding|\bcode\b|programming|software|developer|qwen|codestral|devstral|starcoder|codellama|flint|laguna|ernie.*flash|nemotron.*(ultra|lightning)|north.*code/i.test(`${m.id || ''} ${m.name || ''} ${m.description || ''}`);
 function syncCodeModels() {
   MODELS.length = 0;
-  MODELS.push(AUTO_MODEL, CATION_MODEL, ...visibleModels());
+  MODELS.push(AUTO_MODEL, CATION_MODEL, LLM7_MODEL, ...visibleModels());
   const known = MODELS.some(m => m.id === prefs.model) || (prefs.customId && prefs.model === prefs.customId);
   if (!known) { prefs.model = AUTO_MODEL.id; persist(); }
   buildModelSelect();
@@ -5467,6 +5469,8 @@ function providerName(model) {
   if (id === AUTO_MODEL.id) return 'OpenRouter';
   if (id.startsWith('kilo:')) return 'Kilo';
   if (id.startsWith('pollinations:')) return 'Pollinations';
+  if (id.startsWith('groq:')) return 'Groq';
+  if (id.startsWith('llm7:')) return 'LLM7';
   if (id.startsWith('ovh:')) return 'OVHcloud ' + id.slice(4);
   if (id === CATION_ID) return 'Cation';
   if (id.startsWith('webllm:') || WEBLLM_MODELS[id]) return 'the in-browser model';
@@ -5477,6 +5481,8 @@ function providerKey(model) {
   const id = String(model || '');
   if (id.startsWith('kilo:')) return 'kilo';
   if (id.startsWith('pollinations:')) return 'pollinations';
+  if (id.startsWith('groq:')) return 'groq';
+  if (id.startsWith('llm7:')) return 'llm7';
   if (id.startsWith('ovh:')) return 'ovh';
   if (id === CATION_ID) return 'cation';
   if (id.startsWith('webllm:') || WEBLLM_MODELS[id]) return 'webllm';
@@ -5562,31 +5568,85 @@ function cationMessages(list) {
 }
 
 /* Auto follows Quillo Pro's provider chain: Kilo auto first (fastest), then Qwen on OVHcloud
-   (no key needed, served through api/ovh.js), then OpenRouter via api/chat.js, which holds the key. */
+   (no key needed, served through api/ovh.js), then LLM7 (api/llm7.js), then OpenRouter via api/chat.js, which holds the key. */
 const OVH_GATEWAY_BASE = '/api/ovh?path=';
-const AUTO_CHAIN = [
-  { model: 'kilo:kilo-auto/free', url: KILO_GATEWAY_BASE + 'chat/completions', wire: 'kilo-auto/free', limit: 20000 },
-  { model: 'pollinations:openai', url: '/api/pollinations', wire: 'openai', limit: 30000 },
-  { model: 'ovh:Qwen3.5-9B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.5-9B', limit: 45000 },
-  { model: 'ovh:Qwen3.6-27B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.6-27B', limit: 45000 },
-  { model: AUTO_MODEL.id, url: '/api/chat', wire: AUTO_MODEL.id, limit: 30000 }
+/* The fixed front of the chain, in order. Every other model follows it, then the OpenRouter router. */
+const AUTO_HEAD = [
+  { model: 'kilo:kilo-auto/free', url: KILO_GATEWAY_BASE + 'chat/completions', wire: 'kilo-auto/free', limit: 12000, size: 'large' },
+  { model: 'pollinations:openai', url: '/api/pollinations', wire: 'openai', limit: 12000 },
+  { model: 'ovh:Qwen3.5-9B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.5-9B', limit: 15000, size: 'small', params: 9 },
+  { model: 'ovh:Qwen3.6-27B', url: OVH_GATEWAY_BASE + 'chat/completions', wire: 'Qwen3.6-27B', limit: 15000, size: 'large' },
+  { model: 'llm7:default', url: '/api/llm7', wire: 'default', limit: 12000 },
+  { model: CATION_ID, url: '/api/cation', wire: CATION_ID, limit: 30000, cation: true },
+  { model: 'groq:llama-3.1-8b-instant', url: '/api/voice?action=llm', wire: 'llama-3.1-8b-instant', limit: 12000, text: true, size: 'small', params: 8 }
 ];
+/* Reads a model's size in billions of parameters from its name, e.g. "Qwen3-8B" gives 8. Unknown gives null. */
+function paramsFromName(m) {
+  const hit = /(?:^|[^a-z0-9])(\d+(?:\.\d+)?)\s*b(?![a-z])/i.exec(`${m.id || ''} ${m.name || ''}`);
+  return hit ? parseFloat(hit[1]) : null;
+}
+/* Builds the chain at call time, so every model in the catalogue is tried when the ones before it fail. */
+function autoChain() {
+  /* Thinking off: small, fast models first. Thinking on: large models first. */
+  /* With Thinking off, the smallest models go first, since replies are short and quick matters most. */
+  const small = AUTO_HEAD.filter(p => p.size === 'small').sort((a, b) => a.params - b.params);
+  const large = AUTO_HEAD.filter(p => p.size === 'large');
+  const other = AUTO_HEAD.filter(p => !p.size);
+  const head = prefs.thinking === true ? [...large, ...other, ...small] : [...small, ...other, ...large];
+  const seen = new Set(head.map(p => p.model));
+  let rest = freeCatalog
+    .filter(m => m.id && m.id !== AUTO_MODEL.id && !seen.has(m.id))
+    .map(m => ({ model: m.id, url: '/api/chat', wire: m.id, limit: 10000, params: paramsFromName(m) }));
+  if (prefs.thinking !== true) rest.sort((a, b) => (a.params ?? Infinity) - (b.params ?? Infinity));
+  rest = rest.map(({ params, ...r }) => r);
+  return [...head, ...rest, { model: AUTO_MODEL.id, url: '/api/chat', wire: AUTO_MODEL.id, limit: 30000 }];
+}
+/* Groq's text route takes plain strings only, so picture parts are dropped for those entries. */
+const textOnlyMessages = msgs => msgs.map(m => ({ role: m.role, content: Array.isArray(m.content) ? m.content.filter(x => x.type === 'text').map(x => x.text).join('\n') : m.content }));
 /* Tries each provider in turn. Any failure (error, rate limit, timeout, no response) moves on to the
    next provider. A provider that just failed is skipped for a short cooldown so repeated messages do
    not keep hitting a provider that is down. The last provider is always tried so the chain never
    becomes empty. The first provider that answers is returned with the model that produced it. */
-const AUTO_COOLDOWN_MS = 15 * 1000;
-const autoCooldown = new Map();
+const AUTO_COOLDOWN_MS = 5 * 1000;
+/* Per-model health: how many times in a row it failed, and when it may be tried again. */
+const autoHealth = new Map();
+const AUTO_MAX_WAIT_MS = 120 * 1000;
+const AUTH_WAIT_MS = 10 * 60 * 1000;
+/* The Retry-After header, in seconds or as a date, if the provider sent one. */
+function retryAfterMs(res) {
+  const h = res?.headers?.get?.('retry-after');
+  if (!h) return null;
+  const secs = Number(h);
+  if (Number.isFinite(secs)) return Math.max(0, secs * 1000);
+  const when = Date.parse(h);
+  return Number.isNaN(when) ? null : Math.max(0, when - Date.now());
+}
+/* Pauses a failing model. Rate limits wait for the provider's Retry-After if it gave one, otherwise back off
+   5s, 10s, 20s... up to two minutes, with a little jitter so many tabs do not retry in step.
+   A bad key or refused access (401/403) pauses for ten minutes, since retrying will not help. */
+function markFailed(model, status, res) {
+  const strikes = (autoHealth.get(model)?.strikes || 0) + 1;
+  let wait;
+  if (status === 401 || status === 403) wait = AUTH_WAIT_MS;
+  else {
+    const backoff = AUTO_COOLDOWN_MS * 2 ** Math.min(strikes - 1, 5);
+    wait = Math.min(Math.max(retryAfterMs(res) ?? 0, backoff), AUTO_MAX_WAIT_MS);
+  }
+  wait *= 0.9 + Math.random() * 0.2;
+  autoHealth.set(model, { strikes, until: Date.now() + wait });
+}
+function markHealthy(model) { autoHealth.delete(model); }
 async function autoChainFetch(reqMessages, parent, excludeKey = null, priorFailures = []) {
   let last = null;
   const failures = [...priorFailures];
-  for (let i = 0; i < AUTO_CHAIN.length; i++) {
-    const p = AUTO_CHAIN[i];
-    const isLast = i === AUTO_CHAIN.length - 1;
+  const chain = autoChain();
+  for (let i = 0; i < chain.length; i++) {
+    const p = chain[i];
+    const isLast = i === chain.length - 1;
     if (parent.signal.aborted) throw new DOMException('Stopped', 'AbortError');
     if (excludeKey && providerKey(p.model) === excludeKey) continue;
     const name = providerName(p.model);
-    if (!isLast && (autoCooldown.get(p.model) || 0) > Date.now()) {
+    if (!isLast && (autoHealth.get(p.model)?.until || 0) > Date.now()) {
       failures.push({ name, reason: 'paused after a recent failure' });
       continue;
     }
@@ -5598,9 +5658,9 @@ async function autoChainFetch(reqMessages, parent, excludeKey = null, priorFailu
       const body = {
         model: p.wire,
         stream: true,
-        ...(prefs.thinking === true ? { reasoning: { effort: 'high' } } : {}),
+        ...(prefs.thinking === true ? { reasoning: { effort: 'low' } } : {}),
         ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
-        messages: reqMessages
+        messages: p.text ? textOnlyMessages(reqMessages) : p.cation ? cationMessages(reqMessages) : reqMessages
       };
       const res = await fetch(p.url, {
         method: 'POST',
@@ -5609,14 +5669,14 @@ async function autoChainFetch(reqMessages, parent, excludeKey = null, priorFailu
         signal: attempt.signal
       });
       last = { res, model: p.model };
-      if (res.ok) { autoCooldown.delete(p.model); return { ...last, failures }; }
+      if (res.ok) { markHealthy(p.model); return { ...last, failures }; }
       const detail = await readErrorDetail(res);
       failures.push({ name, reason: shortReason(res.status, detail), status: res.status });
-      if (!isLast) autoCooldown.set(p.model, Date.now() + AUTO_COOLDOWN_MS);
+      if (!isLast) markFailed(p.model, res.status, res);
     } catch (err) {
       if (parent.signal.aborted) throw err;
       failures.push({ name, reason: err.name === 'AbortError' ? 'timed out' : 'could not be reached' });
-      if (!isLast) autoCooldown.set(p.model, Date.now() + AUTO_COOLDOWN_MS);
+      if (!isLast) markFailed(p.model, 0, null);
       if (isLast) throw chainFailureError(failures);
     } finally {
       clearTimeout(timer);
@@ -5684,7 +5744,9 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   if (useModel === AUTO_MODEL.id) {
     res = takeChainResult(await autoChainFetch(reqMessages, ctrl), tgt);
   } else if (useModel.startsWith('groq:')) {
-    res = await viaProvider('/api/voice?action=llm', { model: useModel.slice(5), messages: reqMessages });
+    res = await viaProvider('/api/voice?action=llm', { model: useModel.slice(5), messages: textOnlyMessages(reqMessages) });
+  } else if (useModel.startsWith('llm7:')) {
+    res = await viaProvider('/api/llm7', { model: useModel.slice(5), stream: true, messages: reqMessages });
   } else if (useModel === CATION_ID) {
     /* Kepler's own server route holds the Cation key and forwards the chat. */
     res = await viaProvider('/api/cation', { messages: cationMessages(payloadMessages) });
@@ -5695,7 +5757,7 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
     res = await viaProvider(KILO_GATEWAY_BASE + 'chat/completions', {
       model: useModel.slice('kilo:'.length),
       stream: true,
-      ...(prefs.thinking === true ? { reasoning: { effort: 'high' } } : {}),
+      ...(prefs.thinking === true ? { reasoning: { effort: 'low' } } : {}),
       ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
       messages: reqMessages
     });
@@ -5703,7 +5765,7 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
     res = await viaProvider('/api/chat', {
       model: useModel,
       stream: true,
-      ...(prefs.thinking === true ? { reasoning: { effort: 'high' } } : {}),
+      ...(prefs.thinking === true ? { reasoning: { effort: 'low' } } : {}),
       ...(typeof prefs.temp === 'number' && prefs.temp !== 1 ? { temperature: prefs.temp } : {}),
       messages: reqMessages
     });
@@ -8177,9 +8239,8 @@ const voice = {
   recorder: null, recording: false, recStart: 0, lastVoiceAt: 0, bargeSince: 0, listenAt: 0
 };
 const VOICE_SILENCE_MS = 650;
-/* Voice-only settings: a fast model and short spoken answers. */
+/* Voice uses the full chat path (system prompt, memory, history). Only the model is the fast one. */
 const VOICE_MODEL = 'groq:llama-3.1-8b-instant';
-const VOICE_RULES = 'You are Kepler, talking out loud on a voice call. Reply in one to three short, natural spoken sentences. No markdown, lists, headings, code blocks or links.';
 /* While Kepler speaks, the mic can hear Kepler's own voice. Only a phrase this long counts as an interruption. */
 const VOICE_BARGE_WORDS = 3;
 /* Microphone level below which the orb treats the sound as background noise. */
@@ -8410,11 +8471,6 @@ async function voiceSend(text) {
     await streamInto(assistantMsg, null, {
       model: VOICE_MODEL,
       web: false,
-      systemPrompt: VOICE_RULES,
-      messages: c.messages
-        .filter(m => m !== assistantMsg && m.content && !m.error)
-        .slice(-6)
-        .map(({ role, content }) => ({ role, content: String(content).slice(0, 1500) })),
       onDelta: () => voiceFlushSentences(assistantMsg, false)
     });
     voiceFlushSentences(assistantMsg, true);
