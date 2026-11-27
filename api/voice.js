@@ -113,11 +113,46 @@ async function handleStt(req, res) {
   }
 }
 
+async function handleLlm(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
+  const key = process.env.GROQ_API_KEY;
+  if (!key) return res.status(500).json({ error: 'Groq is not configured on the server.' });
+
+  const { messages, model } = req.body || {};
+  if (!Array.isArray(messages) || !messages.length) return res.status(400).json({ error: 'No messages.' });
+  const id = typeof model === 'string' && /^[A-Za-z0-9._\/-]{1,80}$/.test(model) ? model : 'llama-3.1-8b-instant';
+
+  try {
+    const upstream = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: id, messages: messages.slice(-30), stream: true, max_tokens: 400, temperature: 0.7 })
+    });
+    if (!upstream.ok || !upstream.body) {
+      return res.status(upstream.status || 502).json({ error: `Groq returned HTTP ${upstream.status}.` });
+    }
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(200);
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+    return res.end();
+  } catch {
+    if (!res.headersSent) return res.status(502).json({ error: 'Could not reach Groq.' });
+    return res.end();
+  }
+}
+
 export default async function handler(req, res) {
   const action = (req.query && req.query.action) || new URL(req.url, 'http://localhost').searchParams.get('action');
-  if (!['tts', 'voices', 'stt'].includes(action)) return res.status(404).json({ error: 'Unknown voice action.' });
+  if (!['tts', 'voices', 'stt', 'llm'].includes(action)) return res.status(404).json({ error: 'Unknown voice action.' });
   if (!(await isSignedIn(req))) return res.status(401).json({ error: 'Sign in to use voice.' });
   if (action === 'tts') return handleTts(req, res);
   if (action === 'voices') return handleVoices(req, res);
+  if (action === 'llm') return handleLlm(req, res);
   return handleStt(req, res);
 }
