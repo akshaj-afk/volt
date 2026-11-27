@@ -1,26 +1,30 @@
-// api/voice.js: all voice routes in one serverless function (Vercel Hobby allows 12 per deployment).
-// Routed by ?action= : tts (Fish Audio speech), voices (Fish Audio voice list), stt (Groq Whisper).
-// Public URLs stay /api/tts, /api/voices and /api/stt through vercel.json rewrites.
-// Keys live in Vercel env vars: FISH_AUDIO_API_KEY, GROQ_API_KEY. Sign-in is required for all three.
+// api/voice.js: voice routes on the Vercel Edge runtime (near-zero cold start, streams responses).
+// ?action= tts (Fish Audio speech, streamed), stt (Groq Whisper), llm (Groq chat, streamed), voices (Fish list).
+// Keys: FISH_AUDIO_API_KEY, GROQ_API_KEY. Sign-in is required for every action.
+
+export const config = { runtime: 'edge' };
 
 const MOOD_TAGS = { Gentle: 'soft', Upbeat: 'excited', Serious: 'serious', Calm: '' };
 const FISH_MODEL_LIST_URL = 'https://api.fish.audio/model?page_size=100&sort_by=score';
 const MAX_AUDIO_BYTES = 6 * 1024 * 1024;
+const VERIFY_TTL_MS = 30 * 60 * 1000;
 
 const verified = new Map();
-const VERIFY_TTL_MS = 5 * 60 * 1000;
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+}
 
 /* A session is valid when the existing sync endpoint accepts the same bearer token. */
 async function isSignedIn(req) {
-  const auth = req.headers.authorization || '';
+  const auth = req.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) return false;
   const token = auth.slice(7).trim();
   if (!token) return false;
   const cached = verified.get(token);
   if (cached && cached > Date.now()) return true;
-  const proto = req.headers['x-forwarded-proto'] || 'https';
   try {
-    const r = await fetch(`${proto}://${req.headers.host}/api/data`, { headers: { Authorization: auth } });
+    const r = await fetch(`${new URL(req.url).origin}/api/data`, { headers: { Authorization: auth } });
     if (!r.ok) return false;
     verified.set(token, Date.now() + VERIFY_TTL_MS);
     return true;
@@ -29,14 +33,14 @@ async function isSignedIn(req) {
   }
 }
 
-async function handleTts(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
+async function handleTts(req) {
+  if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
   const key = process.env.FISH_AUDIO_API_KEY;
-  if (!key) return res.status(500).json({ error: 'Voice output is not configured on the server.' });
+  if (!key) return json({ error: 'Voice output is not configured on the server.' }, 500);
 
-  const { text = '', mood = '', voiceId = '' } = req.body || {};
+  const { text = '', mood = '', voiceId = '' } = (await req.json().catch(() => ({}))) || {};
   const clean = String(text).slice(0, 1000).trim();
-  if (!clean) return res.status(400).json({ error: 'No text to speak.' });
+  if (!clean) return json({ error: 'No text to speak.' }, 400);
 
   const tag = MOOD_TAGS[mood] || '';
   const input = tag ? `(${tag}) ${clean}` : clean;
@@ -47,50 +51,44 @@ async function handleTts(req, res) {
   try {
     const upstream = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        model: process.env.FISH_AUDIO_MODEL || 's2.1-pro-free'
-      },
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', model: process.env.FISH_AUDIO_MODEL || 's2.1-pro-free' },
       body: JSON.stringify(body)
     });
-    if (!upstream.ok) return res.status(upstream.status).json({ error: `Fish Audio returned HTTP ${upstream.status}.` });
-    const audio = Buffer.from(await upstream.arrayBuffer());
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).send(audio);
+    if (!upstream.ok) return json({ error: `Fish Audio returned HTTP ${upstream.status}.` }, upstream.status);
+    /* Pass the audio straight through, so the browser can start playing before it is complete. */
+    return new Response(upstream.body, { status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' } });
   } catch {
-    return res.status(502).json({ error: 'Could not reach Fish Audio.' });
+    return json({ error: 'Could not reach Fish Audio.' }, 502);
   }
 }
 
-async function handleVoices(req, res) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Use GET.' });
+async function handleVoices(req) {
+  if (req.method !== 'GET') return json({ error: 'Use GET.' }, 405);
   const key = process.env.FISH_AUDIO_API_KEY;
-  if (!key) return res.status(500).json({ error: 'Voice output is not configured on the server.' });
+  if (!key) return json({ error: 'Voice output is not configured on the server.' }, 500);
   try {
     const upstream = await fetch(FISH_MODEL_LIST_URL, { headers: { Authorization: `Bearer ${key}` } });
-    if (!upstream.ok) return res.status(upstream.status).json({ error: `Fish Audio returned HTTP ${upstream.status} for the voice list.` });
+    if (!upstream.ok) return json({ error: `Fish Audio returned HTTP ${upstream.status} for the voice list.` }, upstream.status);
     const data = await upstream.json();
     const items = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
-    const voices = items.map(m => ({ id: m._id || m.id, title: m.title || m.name || 'Voice' })).filter(v => v.id);
-    res.setHeader('Cache-Control', 'private, max-age=300');
-    return res.status(200).json({ voices });
+    return json({ voices: items.map(m => ({ id: m._id || m.id, title: m.title || m.name || 'Voice' })).filter(v => v.id) });
   } catch {
-    return res.status(502).json({ error: 'Could not reach Fish Audio.' });
+    return json({ error: 'Could not reach Fish Audio.' }, 502);
   }
 }
 
-async function handleStt(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
+async function handleStt(req) {
+  if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
   const key = process.env.GROQ_API_KEY;
-  if (!key) return res.status(500).json({ error: 'Speech recognition is not configured on the server.' });
+  if (!key) return json({ error: 'Speech recognition is not configured on the server.' }, 500);
 
-  const { audio = '', mime = 'audio/webm' } = req.body || {};
-  if (typeof audio !== 'string' || !audio) return res.status(400).json({ error: 'No audio.' });
-  const bytes = Buffer.from(audio, 'base64');
-  if (!bytes.length) return res.status(400).json({ error: 'Empty audio.' });
-  if (bytes.length > MAX_AUDIO_BYTES) return res.status(413).json({ error: 'Recording too long.' });
+  const { audio = '', mime = 'audio/webm' } = (await req.json().catch(() => ({}))) || {};
+  if (typeof audio !== 'string' || !audio) return json({ error: 'No audio.' }, 400);
+  let bytes;
+  try { bytes = Uint8Array.from(atob(audio), c => c.charCodeAt(0)); }
+  catch { return json({ error: 'Audio is not valid base64.' }, 400); }
+  if (!bytes.length) return json({ error: 'Empty audio.' }, 400);
+  if (bytes.length > MAX_AUDIO_BYTES) return json({ error: 'Recording too long.' }, 413);
 
   const type = String(mime).split(';')[0] || 'audio/webm';
   const ext = type.includes('ogg') ? 'ogg' : type.includes('mp4') ? 'mp4' : 'webm';
@@ -101,25 +99,23 @@ async function handleStt(req, res) {
 
   try {
     const upstream = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}` },
-      body: form
+      method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form
     });
-    if (!upstream.ok) return res.status(upstream.status).json({ error: `Groq returned HTTP ${upstream.status}.` });
+    if (!upstream.ok) return json({ error: `Groq returned HTTP ${upstream.status}.` }, upstream.status);
     const data = await upstream.json();
-    return res.status(200).json({ text: String(data.text || '').trim() });
+    return json({ text: String(data.text || '').trim() });
   } catch {
-    return res.status(502).json({ error: 'Could not reach Groq.' });
+    return json({ error: 'Could not reach Groq.' }, 502);
   }
 }
 
-async function handleLlm(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
+async function handleLlm(req) {
+  if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
   const key = process.env.GROQ_API_KEY;
-  if (!key) return res.status(500).json({ error: 'Groq is not configured on the server.' });
+  if (!key) return json({ error: 'Groq is not configured on the server.' }, 500);
 
-  const { messages, model } = req.body || {};
-  if (!Array.isArray(messages) || !messages.length) return res.status(400).json({ error: 'No messages.' });
+  const { messages, model } = (await req.json().catch(() => ({}))) || {};
+  if (!Array.isArray(messages) || !messages.length) return json({ error: 'No messages.' }, 400);
   const id = typeof model === 'string' && /^[A-Za-z0-9._\/-]{1,80}$/.test(model) ? model : 'llama-3.1-8b-instant';
 
   try {
@@ -128,31 +124,19 @@ async function handleLlm(req, res) {
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: id, messages: messages.slice(-30), stream: true, max_tokens: 400, temperature: 0.7 })
     });
-    if (!upstream.ok || !upstream.body) {
-      return res.status(upstream.status || 502).json({ error: `Groq returned HTTP ${upstream.status}.` });
-    }
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-store');
-    res.status(200);
-    const reader = upstream.body.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      res.write(value);
-    }
-    return res.end();
+    if (!upstream.ok || !upstream.body) return json({ error: `Groq returned HTTP ${upstream.status}.` }, upstream.status || 502);
+    return new Response(upstream.body, { status: 200, headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store' } });
   } catch {
-    if (!res.headersSent) return res.status(502).json({ error: 'Could not reach Groq.' });
-    return res.end();
+    return json({ error: 'Could not reach Groq.' }, 502);
   }
 }
 
-export default async function handler(req, res) {
-  const action = (req.query && req.query.action) || new URL(req.url, 'http://localhost').searchParams.get('action');
-  if (!['tts', 'voices', 'stt', 'llm'].includes(action)) return res.status(404).json({ error: 'Unknown voice action.' });
-  if (!(await isSignedIn(req))) return res.status(401).json({ error: 'Sign in to use voice.' });
-  if (action === 'tts') return handleTts(req, res);
-  if (action === 'voices') return handleVoices(req, res);
-  if (action === 'llm') return handleLlm(req, res);
-  return handleStt(req, res);
+export default async function handler(req) {
+  const action = new URL(req.url).searchParams.get('action');
+  if (!['tts', 'voices', 'stt', 'llm'].includes(action)) return json({ error: 'Unknown voice action.' }, 404);
+  if (!(await isSignedIn(req))) return json({ error: 'Sign in to use voice.' }, 401);
+  if (action === 'tts') return handleTts(req);
+  if (action === 'voices') return handleVoices(req);
+  if (action === 'llm') return handleLlm(req);
+  return handleStt(req);
 }
