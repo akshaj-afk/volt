@@ -5669,7 +5669,9 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
   const viaProvider = async (url, body) => {
     let r;
     try {
-      r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal });
+      const s = session();
+      const auth = url.startsWith('/api/voice') && s ? { Authorization: 'Bearer ' + s.token } : {};
+      r = await fetch(url, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, auth), body: JSON.stringify(body), signal: ctrl.signal });
     } catch (err) {
       if (ctrl.signal.aborted) throw err;
       return failover({ reason: 'could not be reached' });
