@@ -5681,6 +5681,8 @@ async function streamInto(assistantMsg, bodyEl, opts = {}) {
 
   if (useModel === AUTO_MODEL.id) {
     res = takeChainResult(await autoChainFetch(reqMessages, ctrl), tgt);
+  } else if (useModel.startsWith('groq:')) {
+    res = await viaProvider('/api/voice?action=llm', { model: useModel.slice(5), messages: reqMessages });
   } else if (useModel === CATION_ID) {
     /* Kepler's own server route holds the Cation key and forwards the chat. */
     res = await viaProvider('/api/cation', { messages: cationMessages(payloadMessages) });
@@ -8172,7 +8174,10 @@ const voice = {
   spoken: '', lastSpeechEnd: 0, fishWarned: false,
   recorder: null, recording: false, recStart: 0, lastVoiceAt: 0, bargeSince: 0, listenAt: 0
 };
-const VOICE_SILENCE_MS = 1100;
+const VOICE_SILENCE_MS = 650;
+/* Voice-only settings: a fast model and short spoken answers. */
+const VOICE_MODEL = 'groq:llama-3.1-8b-instant';
+const VOICE_RULES = '\n\nVoice call mode: you are speaking out loud. Reply in one to three short, natural spoken sentences. No markdown, lists, headings, code blocks or links.';
 /* While Kepler speaks, the mic can hear Kepler's own voice. Only a phrase this long counts as an interruption. */
 const VOICE_BARGE_WORDS = 3;
 /* Microphone level below which the orb treats the sound as background noise. */
@@ -8401,6 +8406,9 @@ async function voiceSend(text) {
   renderAll(false);
   try {
     await streamInto(assistantMsg, null, {
+      model: VOICE_MODEL,
+      web: false,
+      systemPrompt: buildSystemPrompt() + VOICE_RULES,
       onDelta: () => voiceFlushSentences(assistantMsg, false)
     });
     voiceFlushSentences(assistantMsg, true);
@@ -8455,7 +8463,8 @@ function voiceSpeak(text, moodFromText = true) {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/\s+/g, ' ').trim();
   if (!clean || !voice.active || !('speechSynthesis' in window)) return;
-  voice.queue.push({ text: clean, mood: moodFromText ? voiceMoodFor(clean) : null });
+  const mood = moodFromText ? voiceMoodFor(clean) : null;
+  voice.queue.push({ text: clean, mood, clip: voiceFetchClip(clean, mood) });
   voice.spoken = (voice.spoken + ' ' + clean).slice(-600);
   if (!voice.speaking) voiceDrain();
 }
@@ -8519,6 +8528,44 @@ function voiceSpeakBrowser(next, token, done) {
   u.onend = u.onerror = () => { if (token === voice.utter) done(); };
   speechSynthesis.speak(u);
 }
+/* Requests speech for one sentence. Starts right away, so the audio is ready when its turn comes. */
+function voiceFetchClip(text, mood) {
+  return (async () => {
+    try {
+      const s = session();
+      const res = await fetch('/api/voice?action=tts', {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, s ? { Authorization: 'Bearer ' + s.token } : {}),
+        body: JSON.stringify({ text, mood: mood?.label || 'Calm', voiceId: prefs.voiceId || FISH_DEFAULT_VOICE_ID })
+      });
+      if (res.status === 401) return { auth: true };
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { msg = (await res.json()).error || msg; } catch {}
+        return { error: msg };
+      }
+      return { url: URL.createObjectURL(await res.blob()) };
+    } catch {
+      return { error: 'could not reach the voice service' };
+    }
+  })();
+}
+function voicePlayClip(url, next, token, done) {
+  const audio = new Audio(url);
+  voice.audio = audio;
+  const finish = () => {
+    URL.revokeObjectURL(url);
+    if (voice.audio === audio) voice.audio = null;
+    if (token === voice.utter) done();
+  };
+  audio.onended = finish;
+  audio.onerror = finish;
+  audio.play().catch(() => {
+    URL.revokeObjectURL(url);
+    if (voice.audio === audio) voice.audio = null;
+    if (token === voice.utter) voiceSpeakBrowser(next, token, done);
+  });
+}
 function voiceDrain() {
   const next = voice.queue.shift();
   if (!next) {
@@ -8529,13 +8576,22 @@ function voiceDrain() {
   }
   voice.speaking = true;
   voiceSetState('speaking');
-  /* Keep the mic on while speaking, so the user can interrupt. */
+  /* Keep the mic in its normal state while speaking, so barge-in can work when enabled. */
   if (!voice.listening && !voice.muted) voiceStartListening();
   if (next.mood) $('voiceMood').textContent = next.mood.label;
   const token = ++voice.utter;
   const done = () => voiceDrain();
-  voiceSpeakFish(next.text, next.mood?.label || 'Calm', token, done).then(ok => {
-    if (!ok && token === voice.utter) voiceSpeakBrowser(next, token, done);
+  next.clip.then(r => {
+    if (token !== voice.utter) { if (r.url) URL.revokeObjectURL(r.url); return; }
+    if (r.auth) { voiceClose(); toast('Sign in to use voice.'); openAuth('signin'); return; }
+    if (r.url) return voicePlayClip(r.url, next, token, done);
+    console.warn('Fish Audio voice failed:', r.error);
+    voiceError('Fish Audio: ' + r.error + '. Using the browser voice.');
+    if (!voice.fishWarned) {
+      voice.fishWarned = true;
+      toast('Fish Audio: ' + r.error + ' Using the browser voice.');
+    }
+    voiceSpeakBrowser(next, token, done);
   });
 }
 /* Barge-in: the user cut in, so stop the voice and the reply, then listen. */
